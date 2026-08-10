@@ -1,0 +1,13 @@
+{
+  "name": "embroidery-saas",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0"
+  },
+  "packageManager": "pnpm@9.9.0"
+}

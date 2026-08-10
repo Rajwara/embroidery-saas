@@ -1,0 +1,26 @@
+# node
+node_modules/
+.next/
+.turbo/
+dist/
+*.tsbuildinfo
+
+# python
+.venv/
+__pycache__/
+*.pyc
+celerybeat-schedule
+*.egg-info/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# misc
+.DS_Store
+*.log
+
+# claude code local state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

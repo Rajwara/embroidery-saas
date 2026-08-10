@@ -1,0 +1,13 @@
+[project]
+name = "embroidery-saas-worker"
+version = "0.1.0"
+description = "Celery worker + beat scheduler for scheduled reports and notifications"
+requires-python = ">=3.12"
+dependencies = [
+    "celery[redis]>=5.4",
+    "redis>=5.0",
+    "resend>=2.0",
+]
+
+[tool.uv]
+package = false
