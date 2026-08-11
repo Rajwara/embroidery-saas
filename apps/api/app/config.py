@@ -6,6 +6,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/embroidery_saas"
+    # Owner/migration-role connection used only by Alembic. Falls back to database_url
+    # when unset (e.g. before the app_user role has been provisioned). See ROADMAP.md
+    # Phase 1 RLS notes: the API must run as a non-owning role for RLS to apply at all.
+    migrations_database_url: str | None = None
     redis_url: str = "redis://localhost:6379/0"
 
     jwt_secret: str = "change-me"

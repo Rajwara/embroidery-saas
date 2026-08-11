@@ -8,7 +8,7 @@ from app.models import Base  # noqa: F401  (imports all models so metadata is po
 
 config = context.config
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+config.set_main_option("sqlalchemy.url", settings.migrations_database_url or settings.database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
