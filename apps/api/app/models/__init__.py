@@ -4,6 +4,9 @@ from app.models.branch import Branch
 from app.models.employee import Employee
 from app.models.factory import Factory
 from app.models.login_history import LoginHistory
+from app.models.lot import Lot
+from app.models.lot_colour import LotColour
+from app.models.lot_component import LotComponent
 from app.models.machine import Machine
 from app.models.party import Party
 from app.models.password_reset_token import PasswordResetToken
@@ -23,6 +26,9 @@ __all__ = [
     "Supplier",
     "Machine",
     "Employee",
+    "Lot",
+    "LotColour",
+    "LotComponent",
     "AuditLog",
     "LoginHistory",
     "PasswordResetToken",

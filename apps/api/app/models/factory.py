@@ -29,3 +29,7 @@ class Factory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="PKR")
     fiscal_year_start_month: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Next value to assign for Lot.lot_number (e.g. "LOT-000001") --
+    # incremented under a row lock inside the same transaction as the Lot
+    # insert (see routers/lots.py) so concurrent creates serialize correctly.
+    next_lot_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

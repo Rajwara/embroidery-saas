@@ -295,6 +295,117 @@ export interface LoginRequest {
   totp_code?: LoginRequestTotpCode;
 }
 
+export interface LotColourCreateRequest {
+  colour_name: string;
+  suit_count: number;
+}
+
+export interface LotColourOut {
+  id: string;
+  lot_id: string;
+  colour_name: string;
+  suit_count: number;
+}
+
+export interface LotColourWithComponentsOut {
+  id: string;
+  lot_id: string;
+  colour_name: string;
+  suit_count: number;
+  components: LotComponentOut[];
+}
+
+export interface LotComponentConfirmRequest {
+  confirmed_quantity: number;
+}
+
+export type LotComponentOutConfirmedQuantity = number | null;
+
+export interface LotComponentOut {
+  id: string;
+  lot_colour_id: string;
+  component_type: string;
+  expected_quantity: number;
+  confirmed_quantity: LotComponentOutConfirmedQuantity;
+  is_confirmed: boolean;
+}
+
+export type LotCreateRequestSuitType = typeof LotCreateRequestSuitType[keyof typeof LotCreateRequestSuitType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const LotCreateRequestSuitType = {
+  one_piece: 'one_piece',
+  two_piece: 'two_piece',
+  three_piece: 'three_piece',
+} as const;
+
+export type LotCreateRequestNotes = string | null;
+
+export interface LotCreateRequest {
+  branch_id: string;
+  party_id: string;
+  received_date: string;
+  suit_type: LotCreateRequestSuitType;
+  total_suit_count: number;
+  notes?: LotCreateRequestNotes;
+}
+
+export type LotDetailOutNotes = string | null;
+
+/**
+ * Used by GET /lots/{id}, generate-components, and confirm -- built
+manually by the router (no ORM relationships defined on Lot/LotColour),
+not derived automatically from response_model attribute access.
+ */
+export interface LotDetailOut {
+  id: string;
+  branch_id: string;
+  party_id: string;
+  lot_number: string;
+  received_date: string;
+  suit_type: string;
+  total_suit_count: number;
+  status: string;
+  notes: LotDetailOutNotes;
+  colours: LotColourWithComponentsOut[];
+}
+
+export type LotOutNotes = string | null;
+
+export interface LotOut {
+  id: string;
+  branch_id: string;
+  party_id: string;
+  lot_number: string;
+  received_date: string;
+  suit_type: string;
+  total_suit_count: number;
+  status: string;
+  notes: LotOutNotes;
+}
+
+export type LotUpdateRequestBranchId = string | null;
+
+export type LotUpdateRequestPartyId = string | null;
+
+export type LotUpdateRequestReceivedDate = string | null;
+
+export type LotUpdateRequestSuitType = 'one_piece' | 'two_piece' | 'three_piece' | null;
+
+export type LotUpdateRequestTotalSuitCount = number | null;
+
+export type LotUpdateRequestNotes = string | null;
+
+export interface LotUpdateRequest {
+  branch_id?: LotUpdateRequestBranchId;
+  party_id?: LotUpdateRequestPartyId;
+  received_date?: LotUpdateRequestReceivedDate;
+  suit_type?: LotUpdateRequestSuitType;
+  total_suit_count?: LotUpdateRequestTotalSuitCount;
+  notes?: LotUpdateRequestNotes;
+}
+
 export type MachineCreateRequestName = string | null;
 
 export type MachineCreateRequestMachineType = string | null;
@@ -758,6 +869,20 @@ skip?: number;
 limit?: number;
 is_active?: boolean;
 name?: string | null;
+};
+
+export type ListLotsParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+party_id?: string | null;
+status?: string | null;
 };
 
 /**
@@ -1830,5 +1955,239 @@ export const updateSupplier = async (supplierId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       supplierUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List Lots
+ */
+export const getListLotsUrl = (params?: ListLotsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/lots?${stringifiedParams}` : `/lots`
+}
+
+export const listLots = async (params?: ListLotsParams, options?: RequestInit): Promise<LotOut[]> => {
+  
+  return apiMutator<LotOut[]>(getListLotsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Lot
+ */
+export const getCreateLotUrl = () => {
+
+
+  
+
+  return `/lots`
+}
+
+export const createLot = async (lotCreateRequest: LotCreateRequest, options?: RequestInit): Promise<LotOut> => {
+  
+  return apiMutator<LotOut>(getCreateLotUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      lotCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Lot
+ */
+export const getGetLotUrl = (lotId: string,) => {
+
+
+  
+
+  return `/lots/${lotId}`
+}
+
+export const getLot = async (lotId: string, options?: RequestInit): Promise<LotDetailOut> => {
+  
+  return apiMutator<LotDetailOut>(getGetLotUrl(lotId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Update Lot
+ */
+export const getUpdateLotUrl = (lotId: string,) => {
+
+
+  
+
+  return `/lots/${lotId}`
+}
+
+export const updateLot = async (lotId: string,
+    lotUpdateRequest: LotUpdateRequest, options?: RequestInit): Promise<LotOut> => {
+  
+  return apiMutator<LotOut>(getUpdateLotUrl(lotId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      lotUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Add Lot Colour
+ */
+export const getAddLotColourUrl = (lotId: string,) => {
+
+
+  
+
+  return `/lots/${lotId}/colours`
+}
+
+export const addLotColour = async (lotId: string,
+    lotColourCreateRequest: LotColourCreateRequest, options?: RequestInit): Promise<LotColourOut> => {
+  
+  return apiMutator<LotColourOut>(getAddLotColourUrl(lotId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      lotColourCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Remove Lot Colour
+ */
+export const getRemoveLotColourUrl = (lotId: string,
+    colourId: string,) => {
+
+
+  
+
+  return `/lots/${lotId}/colours/${colourId}`
+}
+
+export const removeLotColour = async (lotId: string,
+    colourId: string, options?: RequestInit): Promise<void> => {
+  
+  return apiMutator<void>(getRemoveLotColourUrl(lotId,colourId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Generate Lot Components
+ */
+export const getGenerateLotComponentsUrl = (lotId: string,) => {
+
+
+  
+
+  return `/lots/${lotId}/generate-components`
+}
+
+export const generateLotComponents = async (lotId: string, options?: RequestInit): Promise<LotDetailOut> => {
+  
+  return apiMutator<LotDetailOut>(getGenerateLotComponentsUrl(lotId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Confirm Lot Component
+ */
+export const getConfirmLotComponentUrl = (lotId: string,
+    componentId: string,) => {
+
+
+  
+
+  return `/lots/${lotId}/components/${componentId}`
+}
+
+export const confirmLotComponent = async (lotId: string,
+    componentId: string,
+    lotComponentConfirmRequest: LotComponentConfirmRequest, options?: RequestInit): Promise<LotComponentOut> => {
+  
+  return apiMutator<LotComponentOut>(getConfirmLotComponentUrl(lotId,componentId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      lotComponentConfirmRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Confirm Lot
+ */
+export const getConfirmLotUrl = (lotId: string,) => {
+
+
+  
+
+  return `/lots/${lotId}/confirm`
+}
+
+export const confirmLot = async (lotId: string, options?: RequestInit): Promise<LotDetailOut> => {
+  
+  return apiMutator<LotDetailOut>(getConfirmLotUrl(lotId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
   }
 );}

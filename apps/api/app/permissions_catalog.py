@@ -49,6 +49,10 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("roles.view", "View roles and permissions"),
     ("roles.create", "Create roles"),
     ("roles.edit", "Edit roles"),
+    ("lots.view", "View lots"),
+    ("lots.create", "Create lots"),
+    ("lots.edit", "Edit lots"),
+    ("lots.export", "Export lot data"),
 ]
 
 ROLE_TEMPLATES: list[dict] = [
@@ -62,6 +66,7 @@ ROLE_TEMPLATES: list[dict] = [
             "factories.view", "factories.edit", "factories.export",
             "branches.view", "branches.create", "branches.edit", "branches.export",
             "users.view", "users.export",
+            "lots.view", "lots.create", "lots.edit", "lots.export",
         ],
     },
     {
@@ -75,6 +80,7 @@ ROLE_TEMPLATES: list[dict] = [
             "branches.view", "branches.export",
             "users.view", "users.export",
             "roles.view",
+            "lots.view", "lots.export",
         ],
     },
     {
@@ -83,11 +89,12 @@ ROLE_TEMPLATES: list[dict] = [
             "parties.view", "parties.create", "parties.edit",
             "suppliers.view", "suppliers.create", "suppliers.edit",
             "branches.view",
+            "lots.view", "lots.create", "lots.edit",
         ],
     },
     {
         "name": "Machine Operator",
-        "permissions": ["machines.view", "employees.view"],
+        "permissions": ["machines.view", "employees.view", "lots.view"],
     },
 ]
 
