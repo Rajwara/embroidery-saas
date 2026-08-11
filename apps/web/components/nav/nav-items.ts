@@ -1,0 +1,11 @@
+export interface NavItem {
+  label: string;
+  href: string;
+  requiredPermission: string | null;
+}
+
+export const NAV_ITEMS: NavItem[] = [
+  { label: "Dashboard", href: "/", requiredPermission: null },
+  { label: "Parties", href: "/parties", requiredPermission: "parties.view" },
+  { label: "Suppliers", href: "/suppliers", requiredPermission: "suppliers.view" },
+];

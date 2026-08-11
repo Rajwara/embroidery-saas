@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-export default function Home() {
+import { useAuth } from "@/lib/auth-context";
+
+export default function DashboardPage() {
+  const { user } = useAuth();
   const [apiStatus, setApiStatus] = useState<string>("checking...");
 
   useEffect(() => {
@@ -14,10 +17,11 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-24">
-      <h1 className="text-2xl font-semibold">Embroidery Factory Management</h1>
-      <p className="text-gray-600">Phase 0 scaffold — replace this page in Phase 1.</p>
-      <p className="rounded bg-white px-4 py-2 shadow">API status: {apiStatus}</p>
-    </main>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">
+        {user ? `Welcome, ${user.full_name}` : "Dashboard"}
+      </h1>
+      <p className="inline-block rounded bg-white px-4 py-2 shadow">API status: {apiStatus}</p>
+    </div>
   );
 }
