@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
 from sqlalchemy.orm import Session
 
+from app.audit import client_meta
 from app.db import get_db, set_tenant_context
 from app.dependencies import get_current_super_admin, get_current_user
 from app.email import send_password_reset_email
@@ -39,12 +40,6 @@ router = APIRouter()
 RESET_TOKEN_TTL = timedelta(minutes=30)
 
 
-def _client_meta(request: Request) -> tuple[str | None, str | None]:
-    ip = request.client.host if request.client else None
-    user_agent = request.headers.get("user-agent")
-    return ip, user_agent
-
-
 def _record_login_attempt(
     db: Session,
     *,
@@ -74,7 +69,7 @@ def _record_login_attempt(
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
-    ip_address, user_agent = _client_meta(request)
+    ip_address, user_agent = client_meta(request)
 
     user = db.query(User).filter(User.email == payload.email).first()
     if user is None:

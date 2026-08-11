@@ -1,8 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
+from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
 from app.models import Supplier, User
@@ -42,11 +43,27 @@ def list_suppliers(
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_supplier(
     payload: SupplierCreateRequest,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_permission("suppliers.create")),
 ):
     supplier = Supplier(tenant_id=user.tenant_id, **payload.model_dump())
     db.add(supplier)
+    db.flush()  # populate supplier.id -- Python-side default, not set until flush
+
+    ip_address, user_agent = client_meta(request)
+    record_audit(
+        db,
+        tenant_id=user.tenant_id,
+        actor_user_id=user.id,
+        action="create",
+        entity_type="supplier",
+        entity_id=supplier.id,
+        new_values=payload.model_dump(),
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
     db.commit()
     # db.commit() ends the transaction that set_tenant_context() scoped its
     # SET LOCAL to -- re-establish it before the refresh below re-queries
@@ -76,6 +93,7 @@ def get_supplier(
 def update_supplier(
     supplier_id: uuid.UUID,
     payload: SupplierUpdateRequest,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_permission("suppliers.edit")),
 ):
@@ -83,8 +101,29 @@ def update_supplier(
     if supplier is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="supplier_not_found")
 
+    old_values: dict = {}
+    new_values: dict = {}
     for field, value in payload.model_dump(exclude_none=True).items():
+        current = getattr(supplier, field)
+        if current != value:
+            old_values[field] = current
+            new_values[field] = value
         setattr(supplier, field, value)
+
+    if new_values:
+        ip_address, user_agent = client_meta(request)
+        record_audit(
+            db,
+            tenant_id=user.tenant_id,
+            actor_user_id=user.id,
+            action="update",
+            entity_type="supplier",
+            entity_id=supplier.id,
+            old_values=old_values,
+            new_values=new_values,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
 
     db.commit()
     set_tenant_context(db, str(user.tenant_id))

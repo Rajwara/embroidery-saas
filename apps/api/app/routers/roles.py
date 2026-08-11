@@ -1,8 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import get_current_super_admin, get_current_user, require_permission
 from app.models import Permission, Role, User, UserPermissionOverride
@@ -49,12 +50,28 @@ def list_roles(
 @router.post("/roles", response_model=RoleOut, status_code=status.HTTP_201_CREATED)
 def create_role(
     payload: RoleCreateRequest,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_permission("roles.create")),
 ) -> Role:
     role = Role(tenant_id=user.tenant_id, name=payload.name)
     role.permissions = _resolve_permissions(db, payload.permission_codes)
     db.add(role)
+    db.flush()  # populate role.id -- Python-side default, not set until flush
+
+    ip_address, user_agent = client_meta(request)
+    record_audit(
+        db,
+        tenant_id=user.tenant_id,
+        actor_user_id=user.id,
+        action="create",
+        entity_type="role",
+        entity_id=role.id,
+        new_values={"name": role.name, "permission_codes": sorted(p.code for p in role.permissions)},
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
     db.commit()
     # db.commit() ends the transaction that set_tenant_context() scoped its
     # SET LOCAL to -- re-establish it before the refresh below re-queries
@@ -80,6 +97,7 @@ def get_role(
 def update_role(
     role_id: uuid.UUID,
     payload: RoleUpdateRequest,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_permission("roles.edit")),
 ) -> Role:
@@ -87,10 +105,36 @@ def update_role(
     if role is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="role_not_found")
 
-    if payload.name is not None:
+    old_values: dict = {}
+    new_values: dict = {}
+
+    if payload.name is not None and payload.name != role.name:
+        old_values["name"] = role.name
+        new_values["name"] = payload.name
         role.name = payload.name
+
     if payload.permission_codes is not None:
+        old_codes = sorted(p.code for p in role.permissions)
         role.permissions = _resolve_permissions(db, payload.permission_codes)
+        new_codes = sorted(p.code for p in role.permissions)
+        if old_codes != new_codes:
+            old_values["permission_codes"] = old_codes
+            new_values["permission_codes"] = new_codes
+
+    if new_values:
+        ip_address, user_agent = client_meta(request)
+        record_audit(
+            db,
+            tenant_id=user.tenant_id,
+            actor_user_id=user.id,
+            action="update",
+            entity_type="role",
+            entity_id=role.id,
+            old_values=old_values,
+            new_values=new_values,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
 
     db.commit()
     set_tenant_context(db, str(user.tenant_id))
@@ -102,8 +146,9 @@ def update_role(
 def assign_role(
     user_id: uuid.UUID,
     role_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_permission("roles.edit")),
+    user: User = Depends(require_permission("roles.edit")),
 ) -> dict:
     target_user = db.get(User, user_id)
     role = db.get(Role, role_id)
@@ -112,6 +157,18 @@ def assign_role(
 
     if role not in target_user.roles:
         target_user.roles.append(role)
+        ip_address, user_agent = client_meta(request)
+        record_audit(
+            db,
+            tenant_id=user.tenant_id,
+            actor_user_id=user.id,
+            action="role_assigned",
+            entity_type="user",
+            entity_id=target_user.id,
+            new_values={"role_id": role.id, "role_name": role.name},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
         db.commit()
 
     return {"detail": "role_assigned"}
@@ -121,8 +178,9 @@ def assign_role(
 def unassign_role(
     user_id: uuid.UUID,
     role_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_permission("roles.edit")),
+    user: User = Depends(require_permission("roles.edit")),
 ) -> dict:
     target_user = db.get(User, user_id)
     role = db.get(Role, role_id)
@@ -131,6 +189,18 @@ def unassign_role(
 
     if role in target_user.roles:
         target_user.roles.remove(role)
+        ip_address, user_agent = client_meta(request)
+        record_audit(
+            db,
+            tenant_id=user.tenant_id,
+            actor_user_id=user.id,
+            action="role_unassigned",
+            entity_type="user",
+            entity_id=target_user.id,
+            old_values={"role_id": role.id, "role_name": role.name},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
         db.commit()
 
     return {"detail": "role_unassigned"}
@@ -158,8 +228,9 @@ def get_user_permissions(
 def set_permission_override(
     user_id: uuid.UUID,
     payload: PermissionOverrideRequest,
+    request: Request,
     db: Session = Depends(get_db),
-    _admin: User = Depends(get_current_super_admin),
+    admin: User = Depends(get_current_super_admin),
 ) -> EffectivePermissionsResponse:
     target_user = db.get(User, user_id)
     if target_user is None:
@@ -174,14 +245,40 @@ def set_permission_override(
         .filter_by(user_id=target_user.id, permission_id=permission.id)
         .first()
     )
+    old_effect = existing.effect if existing is not None else None
+    ip_address, user_agent = client_meta(request)
 
     if payload.effect is None:
         if existing is not None:
             db.delete(existing)
+            record_audit(
+                db,
+                tenant_id=target_user.tenant_id,
+                actor_user_id=admin.id,
+                action="permission_override_cleared",
+                entity_type="user",
+                entity_id=target_user.id,
+                old_values={"permission_code": payload.permission_code, "effect": old_effect},
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
             db.commit()
     elif existing is not None:
-        existing.effect = payload.effect
-        db.commit()
+        if payload.effect != old_effect:
+            existing.effect = payload.effect
+            record_audit(
+                db,
+                tenant_id=target_user.tenant_id,
+                actor_user_id=admin.id,
+                action="permission_override_updated",
+                entity_type="user",
+                entity_id=target_user.id,
+                old_values={"permission_code": payload.permission_code, "effect": old_effect},
+                new_values={"permission_code": payload.permission_code, "effect": payload.effect},
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            db.commit()
     else:
         db.add(
             UserPermissionOverride(
@@ -190,6 +287,17 @@ def set_permission_override(
                 permission_id=permission.id,
                 effect=payload.effect,
             )
+        )
+        record_audit(
+            db,
+            tenant_id=target_user.tenant_id,
+            actor_user_id=admin.id,
+            action="permission_override_created",
+            entity_type="user",
+            entity_id=target_user.id,
+            new_values={"permission_code": payload.permission_code, "effect": payload.effect},
+            ip_address=ip_address,
+            user_agent=user_agent,
         )
         db.commit()
 
