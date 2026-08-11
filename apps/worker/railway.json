@@ -1,6 +1,6 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "deploy": {
-    "startCommand": "uv run celery -A celery_app worker --beat --loglevel=info"
+    "startCommand": "uv run celery -A celery_app worker --loglevel=info"
   }
 }
