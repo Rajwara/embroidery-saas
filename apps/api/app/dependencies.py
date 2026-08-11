@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db, set_tenant_context
 from app.models import User
+from app.permissions import user_has_permission
 from app.security import decode_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -46,3 +47,19 @@ def get_current_super_admin(user: User = Depends(get_current_user)) -> User:
     if not user.is_super_admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="super_admin_required")
     return user
+
+
+def require_permission(code: str):
+    """FastAPI dependency factory for gating routes on a permission code
+    (e.g. Depends(require_permission("parties.create"))). is_super_admin
+    bypasses unconditionally; is_platform_admin does not -- that's a
+    separate cross-tenant SaaS-admin concern, not an in-tenant override."""
+
+    def dependency(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> User:
+        if user.is_super_admin:
+            return user
+        if not user_has_permission(db, user, code):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="permission_denied")
+        return user
+
+    return dependency

@@ -14,6 +14,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.config import get_settings
 from app.models import Tenant, User
+from app.permissions_catalog import ROLE_TEMPLATES, create_role_templates_for_tenant
 from app.security import hash_password
 
 settings = get_settings()
@@ -36,8 +37,24 @@ def run() -> None:
             is_super_admin=True,
         )
         db.add(admin)
+
+        roles = create_role_templates_for_tenant(db, tenant.id)
+        db.flush()
+
+        manager_role = next(r for r in roles if r.name == "Factory Manager")
+        manager = User(
+            tenant_id=tenant.id,
+            email="manager@demo-factory.test",
+            hashed_password=hash_password("changeme123"),
+            full_name="Demo Factory Manager",
+        )
+        manager.roles.append(manager_role)
+        db.add(manager)
+
         db.commit()
         print(f"Seeded tenant {tenant.id} with admin user {admin.email} / changeme123")
+        print(f"Seeded {len(roles)} role templates ({', '.join(t['name'] for t in ROLE_TEMPLATES)})")
+        print(f"Seeded manager user {manager.email} / changeme123 with role '{manager_role.name}'")
     finally:
         db.close()
 

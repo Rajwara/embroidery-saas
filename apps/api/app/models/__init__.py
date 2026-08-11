@@ -7,6 +7,7 @@ from app.models.login_history import LoginHistory
 from app.models.machine import Machine
 from app.models.party import Party
 from app.models.password_reset_token import PasswordResetToken
+from app.models.permission_override import UserPermissionOverride
 from app.models.supplier import Supplier
 from app.models.tenant import Permission, Role, Tenant, User
 
@@ -25,4 +26,5 @@ __all__ = [
     "AuditLog",
     "LoginHistory",
     "PasswordResetToken",
+    "UserPermissionOverride",
 ]

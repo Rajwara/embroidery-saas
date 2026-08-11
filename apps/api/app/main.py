@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import auth
+from app.routers import auth, roles
 
 settings = get_settings()
 
@@ -23,4 +23,4 @@ def health() -> dict:
 
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
-# TODO Phase 1 (later plan): users, roles routers here once the RBAC engine is built.
+app.include_router(roles.router, tags=["roles"])

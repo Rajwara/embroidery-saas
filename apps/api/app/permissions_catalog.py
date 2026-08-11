@@ -1,0 +1,108 @@
+"""
+Single source of truth for the permission catalog and starter role
+templates. Imported by both the RLS/seed-data migration (which bulk-inserts
+PERMISSION_CATALOG into the permissions table) and app/seed.py (which calls
+create_role_templates_for_tenant), so the two never drift out of sync.
+
+Code format: "<module>.<action>". Not every module has every action --
+"approve" is entirely absent (no Phase 1 entity has an approval workflow
+yet) and "see_money" only applies where a table currently carries money
+(parties/suppliers' opening_balance).
+"""
+
+from collections.abc import Sequence
+
+from sqlalchemy.orm import Session
+
+from app.models import Permission, Role
+
+PERMISSION_CATALOG: list[tuple[str, str]] = [
+    ("parties.view", "View parties"),
+    ("parties.create", "Create parties"),
+    ("parties.edit", "Edit parties"),
+    ("parties.see_money", "View party balances"),
+    ("parties.export", "Export party data"),
+    ("suppliers.view", "View suppliers"),
+    ("suppliers.create", "Create suppliers"),
+    ("suppliers.edit", "Edit suppliers"),
+    ("suppliers.see_money", "View supplier balances"),
+    ("suppliers.export", "Export supplier data"),
+    ("machines.view", "View machines"),
+    ("machines.create", "Create machines"),
+    ("machines.edit", "Edit machines"),
+    ("machines.export", "Export machine data"),
+    ("employees.view", "View employees"),
+    ("employees.create", "Create employees"),
+    ("employees.edit", "Edit employees"),
+    ("employees.export", "Export employee data"),
+    ("factories.view", "View company profile"),
+    ("factories.edit", "Edit company profile"),
+    ("factories.export", "Export company profile data"),
+    ("branches.view", "View branches"),
+    ("branches.create", "Create branches"),
+    ("branches.edit", "Edit branches"),
+    ("branches.export", "Export branch data"),
+    ("users.view", "View users"),
+    ("users.create", "Create users"),
+    ("users.edit", "Edit users"),
+    ("users.export", "Export user data"),
+    ("roles.view", "View roles and permissions"),
+    ("roles.create", "Create roles"),
+    ("roles.edit", "Edit roles"),
+]
+
+ROLE_TEMPLATES: list[dict] = [
+    {
+        "name": "Factory Manager",
+        "permissions": [
+            "parties.view", "parties.create", "parties.edit", "parties.see_money", "parties.export",
+            "suppliers.view", "suppliers.create", "suppliers.edit", "suppliers.see_money", "suppliers.export",
+            "machines.view", "machines.create", "machines.edit", "machines.export",
+            "employees.view", "employees.create", "employees.edit", "employees.export",
+            "factories.view", "factories.edit", "factories.export",
+            "branches.view", "branches.create", "branches.edit", "branches.export",
+            "users.view", "users.export",
+        ],
+    },
+    {
+        "name": "Accountant",
+        "permissions": [
+            "parties.view", "parties.see_money", "parties.export",
+            "suppliers.view", "suppliers.see_money", "suppliers.export",
+            "machines.view", "machines.export",
+            "employees.view", "employees.export",
+            "factories.view", "factories.export",
+            "branches.view", "branches.export",
+            "users.view", "users.export",
+            "roles.view",
+        ],
+    },
+    {
+        "name": "Front Office",
+        "permissions": [
+            "parties.view", "parties.create", "parties.edit",
+            "suppliers.view", "suppliers.create", "suppliers.edit",
+            "branches.view",
+        ],
+    },
+    {
+        "name": "Machine Operator",
+        "permissions": ["machines.view", "employees.view"],
+    },
+]
+
+
+def create_role_templates_for_tenant(db: Session, tenant_id, templates: Sequence[dict] = ROLE_TEMPLATES) -> list[Role]:
+    """Creates the starter Role rows (is_template=True) for a newly
+    provisioned tenant, with their permission sets attached. Reused by
+    seed.py today and the onboarding wizard later."""
+    all_permissions = {p.code: p for p in db.query(Permission).all()}
+
+    roles = []
+    for template in templates:
+        role = Role(tenant_id=tenant_id, name=template["name"], is_template=True)
+        role.permissions = [all_permissions[code] for code in template["permissions"]]
+        db.add(role)
+        roles.append(role)
+
+    return roles
