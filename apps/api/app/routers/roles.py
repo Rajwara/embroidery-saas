@@ -33,21 +33,23 @@ def _resolve_permissions(db: Session, codes: list[str]) -> list[Permission]:
     return permissions
 
 
-@router.get("/permissions", response_model=list[PermissionOut])
+@router.get("/permissions", response_model=list[PermissionOut], operation_id="listPermissions")
 def list_permissions(
     db: Session = Depends(get_db), _user: User = Depends(require_permission("roles.view"))
 ) -> list[Permission]:
     return db.query(Permission).order_by(Permission.code).all()
 
 
-@router.get("/roles", response_model=list[RoleOut])
+@router.get("/roles", response_model=list[RoleOut], operation_id="listRoles")
 def list_roles(
     db: Session = Depends(get_db), _user: User = Depends(require_permission("roles.view"))
 ) -> list[Role]:
     return db.query(Role).order_by(Role.name).all()
 
 
-@router.post("/roles", response_model=RoleOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/roles", response_model=RoleOut, status_code=status.HTTP_201_CREATED, operation_id="createRole"
+)
 def create_role(
     payload: RoleCreateRequest,
     request: Request,
@@ -81,7 +83,7 @@ def create_role(
     return role
 
 
-@router.get("/roles/{role_id}", response_model=RoleOut)
+@router.get("/roles/{role_id}", response_model=RoleOut, operation_id="getRole")
 def get_role(
     role_id: uuid.UUID,
     db: Session = Depends(get_db),
@@ -93,7 +95,7 @@ def get_role(
     return role
 
 
-@router.patch("/roles/{role_id}", response_model=RoleOut)
+@router.patch("/roles/{role_id}", response_model=RoleOut, operation_id="updateRole")
 def update_role(
     role_id: uuid.UUID,
     payload: RoleUpdateRequest,
@@ -142,7 +144,9 @@ def update_role(
     return role
 
 
-@router.post("/users/{user_id}/roles/{role_id}", status_code=status.HTTP_200_OK)
+@router.post(
+    "/users/{user_id}/roles/{role_id}", status_code=status.HTTP_200_OK, operation_id="assignRole"
+)
 def assign_role(
     user_id: uuid.UUID,
     role_id: uuid.UUID,
@@ -174,7 +178,11 @@ def assign_role(
     return {"detail": "role_assigned"}
 
 
-@router.delete("/users/{user_id}/roles/{role_id}", status_code=status.HTTP_200_OK)
+@router.delete(
+    "/users/{user_id}/roles/{role_id}",
+    status_code=status.HTTP_200_OK,
+    operation_id="unassignRole",
+)
 def unassign_role(
     user_id: uuid.UUID,
     role_id: uuid.UUID,
@@ -206,7 +214,11 @@ def unassign_role(
     return {"detail": "role_unassigned"}
 
 
-@router.get("/users/{user_id}/permissions", response_model=EffectivePermissionsResponse)
+@router.get(
+    "/users/{user_id}/permissions",
+    response_model=EffectivePermissionsResponse,
+    operation_id="getUserPermissions",
+)
 def get_user_permissions(
     user_id: uuid.UUID,
     db: Session = Depends(get_db),
@@ -224,7 +236,11 @@ def get_user_permissions(
     )
 
 
-@router.put("/users/{user_id}/permission-overrides", response_model=EffectivePermissionsResponse)
+@router.put(
+    "/users/{user_id}/permission-overrides",
+    response_model=EffectivePermissionsResponse,
+    operation_id="setPermissionOverride",
+)
 def set_permission_override(
     user_id: uuid.UUID,
     payload: PermissionOverrideRequest,
@@ -313,7 +329,11 @@ def set_permission_override(
     )
 
 
-@router.get("/me/permissions", response_model=EffectivePermissionsResponse)
+@router.get(
+    "/me/permissions",
+    response_model=EffectivePermissionsResponse,
+    operation_id="getMyPermissions",
+)
 def get_my_permissions(
     user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> EffectivePermissionsResponse:

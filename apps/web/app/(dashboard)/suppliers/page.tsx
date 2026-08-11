@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { ApiError, apiFetch } from "@/lib/api";
+import { listSuppliers } from "@embroidery/types";
+import type { Supplier } from "@embroidery/types";
+
+import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import type { Supplier } from "@/types/supplier";
 
 export default function SuppliersPage() {
   const { hasPermission } = useAuth();
@@ -16,7 +18,7 @@ export default function SuppliersPage() {
   const load = useCallback(() => {
     setError(null);
     setSuppliers(null);
-    apiFetch<Supplier[]>("/suppliers")
+    listSuppliers()
       .then(setSuppliers)
       .catch((err) => {
         if (err instanceof ApiError && err.status === 403) {

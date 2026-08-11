@@ -56,3 +56,12 @@ class SupplierWithBalanceOut(SupplierOut):
     """Returned when the caller DOES have suppliers.see_money."""
 
     opening_balance: Decimal
+
+
+class SupplierDocsOut(SupplierOut):
+    """OpenAPI-documentation-only schema for GET/POST/PATCH /suppliers
+    responses -- same reasoning as PartyDocsOut in schemas/party.py. Not used
+    for response_model or .model_validate(), only inside `responses={...}`.
+    """
+
+    opening_balance: Decimal | None = None

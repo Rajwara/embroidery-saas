@@ -10,6 +10,7 @@ from app.models import Party, User
 from app.permissions import user_has_permission
 from app.schemas.party import (
     PartyCreateRequest,
+    PartyDocsOut,
     PartyOut,
     PartyUpdateRequest,
     PartyWithBalanceOut,
@@ -22,7 +23,14 @@ def _serialize(party: Party, can_see_money: bool) -> PartyOut | PartyWithBalance
     return (PartyWithBalanceOut if can_see_money else PartyOut).model_validate(party)
 
 
-@router.get("")
+# NOTE: response_model is deliberately NOT set on any route below -- see
+# _serialize()'s docstring. The `responses={...}` dicts are FastAPI's
+# `responses=` parameter (distinct from response_model): purely additive
+# OpenAPI documentation for codegen (orval) and Swagger UI, zero effect on
+# runtime request/response handling.
+
+
+@router.get("", responses={200: {"model": list[PartyDocsOut]}}, operation_id="listParties")
 def list_parties(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -40,7 +48,12 @@ def list_parties(
     return [_serialize(p, can_see_money) for p in rows]
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    responses={201: {"model": PartyDocsOut}},
+    operation_id="createParty",
+)
 def create_party(
     payload: PartyCreateRequest,
     request: Request,
@@ -75,7 +88,7 @@ def create_party(
     return _serialize(party, can_see_money)
 
 
-@router.get("/{party_id}")
+@router.get("/{party_id}", responses={200: {"model": PartyDocsOut}}, operation_id="getParty")
 def get_party(
     party_id: uuid.UUID,
     db: Session = Depends(get_db),
@@ -89,7 +102,7 @@ def get_party(
     return _serialize(party, can_see_money)
 
 
-@router.patch("/{party_id}")
+@router.patch("/{party_id}", responses={200: {"model": PartyDocsOut}}, operation_id="updateParty")
 def update_party(
     party_id: uuid.UUID,
     payload: PartyUpdateRequest,

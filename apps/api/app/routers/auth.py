@@ -67,7 +67,7 @@ def _record_login_attempt(
     db.commit()
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, operation_id="login")
 def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
     ip_address, user_agent = client_meta(request)
 
@@ -126,7 +126,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     )
 
 
-@router.post("/refresh", response_model=AccessTokenResponse)
+@router.post("/refresh", response_model=AccessTokenResponse, operation_id="refreshToken")
 def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> AccessTokenResponse:
     try:
         token_payload = decode_token(payload.refresh_token)
@@ -144,7 +144,7 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> AccessTok
     return AccessTokenResponse(access_token=create_access_token(user.id, user.tenant_id))
 
 
-@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+@router.post("/forgot-password", status_code=status.HTTP_200_OK, operation_id="forgotPassword")
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)) -> dict:
     # Always return 200 regardless of whether the email exists -- no user enumeration.
     user = db.query(User).filter(User.email == payload.email).first()
@@ -167,7 +167,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     return {"detail": "if_account_exists_email_sent"}
 
 
-@router.post("/reset-password", status_code=status.HTTP_200_OK)
+@router.post("/reset-password", status_code=status.HTTP_200_OK, operation_id="resetPassword")
 def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)) -> dict:
     token_hash = hash_reset_token(payload.token)
     reset_token = db.query(PasswordResetToken).filter(PasswordResetToken.token_hash == token_hash).first()
@@ -191,14 +191,14 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     return {"detail": "password_reset"}
 
 
-@router.post("/2fa/setup", response_model=TotpSetupResponse)
+@router.post("/2fa/setup", response_model=TotpSetupResponse, operation_id="setupTotp")
 def setup_totp(user: User = Depends(get_current_super_admin)) -> TotpSetupResponse:
     # Not persisted here -- avoids a half-configured MFA state if the user never confirms.
     secret = generate_totp_secret()
     return TotpSetupResponse(secret=secret, provisioning_uri=totp_provisioning_uri(secret, user.email))
 
 
-@router.post("/2fa/verify", status_code=status.HTTP_200_OK)
+@router.post("/2fa/verify", status_code=status.HTTP_200_OK, operation_id="verifyTotp")
 def verify_totp(
     payload: TotpVerifyRequest,
     user: User = Depends(get_current_super_admin),
@@ -213,7 +213,7 @@ def verify_totp(
     return {"detail": "mfa_enabled"}
 
 
-@router.post("/2fa/disable", status_code=status.HTTP_200_OK)
+@router.post("/2fa/disable", status_code=status.HTTP_200_OK, operation_id="disableTotp")
 def disable_totp(
     payload: TotpDisableRequest,
     user: User = Depends(get_current_super_admin),
@@ -228,7 +228,7 @@ def disable_totp(
     return {"detail": "mfa_disabled"}
 
 
-@router.get("/me", response_model=UserProfileResponse)
+@router.get("/me", response_model=UserProfileResponse, operation_id="getMe")
 def me(user: User = Depends(get_current_user)) -> UserProfileResponse:
     return UserProfileResponse(
         id=user.id,

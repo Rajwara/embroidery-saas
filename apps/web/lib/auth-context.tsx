@@ -2,16 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
-import { apiFetch } from "./api";
+import { getMe, getMyPermissions, login as apiLogin } from "@embroidery/types";
+import type { UserProfileResponse } from "@embroidery/types";
+
 import { clearTokens, getTokens, setTokens } from "./auth-storage";
 import { hasPermission } from "./permissions";
-import type { MeResponse, PermissionsResponse, TokenResponse } from "@/types/auth";
 
 type Status = "loading" | "authenticated" | "unauthenticated";
 
 interface AuthContextValue {
   status: Status;
-  user: MeResponse | null;
+  user: UserProfileResponse | null;
   permissions: string[];
   isSuperAdmin: boolean;
   hasPermission: (code: string | null) => boolean;
@@ -27,15 +28,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>(() =>
     getTokens()?.access_token ? "loading" : "unauthenticated"
   );
-  const [user, setUser] = useState<MeResponse | null>(null);
+  const [user, setUser] = useState<UserProfileResponse | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
 
   const loadProfile = useCallback(async () => {
     try {
-      const [me, perms] = await Promise.all([
-        apiFetch<MeResponse>("/auth/me"),
-        apiFetch<PermissionsResponse>("/me/permissions"),
-      ]);
+      const [me, perms] = await Promise.all([getMe(), getMyPermissions()]);
       setUser(me);
       setPermissions(perms.permissions);
       setStatus("authenticated");
@@ -55,10 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string, totpCode?: string) => {
-      const res = await apiFetch<TokenResponse>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password, totp_code: totpCode }),
-      });
+      const res = await apiLogin({ email, password, totp_code: totpCode });
       setTokens(res);
       await loadProfile();
     },

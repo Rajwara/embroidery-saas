@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { ApiError, apiFetch } from "@/lib/api";
+import { listParties } from "@embroidery/types";
+import type { Party } from "@embroidery/types";
+
+import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import type { Party } from "@/types/party";
 
 export default function PartiesPage() {
   const { hasPermission } = useAuth();
@@ -16,7 +18,7 @@ export default function PartiesPage() {
   const load = useCallback(() => {
     setError(null);
     setParties(null);
-    apiFetch<Party[]>("/parties")
+    listParties()
       .then(setParties)
       .catch((err) => {
         if (err instanceof ApiError && err.status === 403) {

@@ -2,5 +2,11 @@
   "name": "@embroidery/types",
   "private": true,
   "version": "0.1.0",
-  "main": "index.ts"
+  "main": "index.ts",
+  "scripts": {
+    "generate": "orval --config orval.config.ts"
+  },
+  "devDependencies": {
+    "orval": "^7.0.0"
+  }
 }

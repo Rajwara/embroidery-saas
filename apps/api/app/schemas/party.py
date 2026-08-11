@@ -56,3 +56,25 @@ class PartyWithBalanceOut(PartyOut):
     """Returned when the caller DOES have parties.see_money."""
 
     opening_balance: Decimal
+
+
+class PartyDocsOut(PartyOut):
+    """OpenAPI-documentation-only schema for GET/POST/PATCH /parties responses.
+
+    NOT passed to response_model anywhere and NOT used with .model_validate()
+    -- routers/parties.py's _serialize() still returns a PartyOut or
+    PartyWithBalanceOut instance directly, unvalidated against this class.
+    This exists solely to be referenced inside `responses={...}` dicts, which
+    injects a schema into openapi.json for docs/codegen (e.g. orval) without
+    FastAPI performing any response validation/filtering step -- that only
+    happens when response_model is set, which is deliberately not the case
+    here (see _serialize()'s docstring for why).
+
+    opening_balance is OPTIONAL here (unlike PartyWithBalanceOut, where it's
+    required) because whether the key is present on the wire depends on the
+    caller's parties.see_money permission at request time -- OpenAPI's static
+    schema format can't express that conditional, so "optional" is the
+    closest accurate approximation.
+    """
+
+    opening_balance: Decimal | None = None
