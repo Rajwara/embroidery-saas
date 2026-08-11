@@ -10,10 +10,273 @@ export interface AccessTokenResponse {
   token_type?: string;
 }
 
+export type BranchCreateRequestAddress = string | null;
+
+export type BranchCreateRequestCity = string | null;
+
+export type BranchCreateRequestPhone = string | null;
+
+export interface BranchCreateRequest {
+  name: string;
+  code: string;
+  address?: BranchCreateRequestAddress;
+  city?: BranchCreateRequestCity;
+  phone?: BranchCreateRequestPhone;
+  is_head_office?: boolean;
+}
+
+export type BranchOutAddress = string | null;
+
+export type BranchOutCity = string | null;
+
+export type BranchOutPhone = string | null;
+
+export interface BranchOut {
+  id: string;
+  factory_id: string;
+  name: string;
+  code: string;
+  address: BranchOutAddress;
+  city: BranchOutCity;
+  phone: BranchOutPhone;
+  is_head_office: boolean;
+  is_active: boolean;
+}
+
+export type BranchUpdateRequestName = string | null;
+
+export type BranchUpdateRequestCode = string | null;
+
+export type BranchUpdateRequestAddress = string | null;
+
+export type BranchUpdateRequestCity = string | null;
+
+export type BranchUpdateRequestPhone = string | null;
+
+export type BranchUpdateRequestIsHeadOffice = boolean | null;
+
+export type BranchUpdateRequestIsActive = boolean | null;
+
+export interface BranchUpdateRequest {
+  name?: BranchUpdateRequestName;
+  code?: BranchUpdateRequestCode;
+  address?: BranchUpdateRequestAddress;
+  city?: BranchUpdateRequestCity;
+  phone?: BranchUpdateRequestPhone;
+  is_head_office?: BranchUpdateRequestIsHeadOffice;
+  is_active?: BranchUpdateRequestIsActive;
+}
+
 export interface EffectivePermissionsResponse {
   user_id: string;
   is_super_admin: boolean;
   permissions: string[];
+}
+
+export type EmployeeCreateRequestUserId = string | null;
+
+export type EmployeeCreateRequestDesignation = string | null;
+
+export type EmployeeCreateRequestPhone = string | null;
+
+export type EmployeeCreateRequestEmail = string | null;
+
+export type EmployeeCreateRequestNationalId = string | null;
+
+export type EmployeeCreateRequestHireDate = string | null;
+
+export interface EmployeeCreateRequest {
+  branch_id: string;
+  user_id?: EmployeeCreateRequestUserId;
+  employee_code: string;
+  full_name: string;
+  designation?: EmployeeCreateRequestDesignation;
+  phone?: EmployeeCreateRequestPhone;
+  email?: EmployeeCreateRequestEmail;
+  national_id?: EmployeeCreateRequestNationalId;
+  hire_date?: EmployeeCreateRequestHireDate;
+  employment_status?: string;
+}
+
+export type EmployeeOutUserId = string | null;
+
+export type EmployeeOutDesignation = string | null;
+
+export type EmployeeOutPhone = string | null;
+
+export type EmployeeOutEmail = string | null;
+
+export type EmployeeOutNationalId = string | null;
+
+export type EmployeeOutHireDate = string | null;
+
+export interface EmployeeOut {
+  id: string;
+  branch_id: string;
+  user_id: EmployeeOutUserId;
+  employee_code: string;
+  full_name: string;
+  designation: EmployeeOutDesignation;
+  phone: EmployeeOutPhone;
+  email: EmployeeOutEmail;
+  national_id: EmployeeOutNationalId;
+  hire_date: EmployeeOutHireDate;
+  employment_status: string;
+  is_active: boolean;
+}
+
+export type EmployeeUpdateRequestEmployeeCode = string | null;
+
+export type EmployeeUpdateRequestFullName = string | null;
+
+export type EmployeeUpdateRequestDesignation = string | null;
+
+export type EmployeeUpdateRequestPhone = string | null;
+
+export type EmployeeUpdateRequestEmail = string | null;
+
+export type EmployeeUpdateRequestNationalId = string | null;
+
+export type EmployeeUpdateRequestHireDate = string | null;
+
+export type EmployeeUpdateRequestEmploymentStatus = string | null;
+
+export type EmployeeUpdateRequestIsActive = boolean | null;
+
+export interface EmployeeUpdateRequest {
+  employee_code?: EmployeeUpdateRequestEmployeeCode;
+  full_name?: EmployeeUpdateRequestFullName;
+  designation?: EmployeeUpdateRequestDesignation;
+  phone?: EmployeeUpdateRequestPhone;
+  email?: EmployeeUpdateRequestEmail;
+  national_id?: EmployeeUpdateRequestNationalId;
+  hire_date?: EmployeeUpdateRequestHireDate;
+  employment_status?: EmployeeUpdateRequestEmploymentStatus;
+  is_active?: EmployeeUpdateRequestIsActive;
+}
+
+export type FactoryCreateRequestLegalName = string | null;
+
+export type FactoryCreateRequestAddressLine1 = string | null;
+
+export type FactoryCreateRequestAddressLine2 = string | null;
+
+export type FactoryCreateRequestCity = string | null;
+
+export type FactoryCreateRequestState = string | null;
+
+export type FactoryCreateRequestPostalCode = string | null;
+
+export type FactoryCreateRequestPhone = string | null;
+
+export type FactoryCreateRequestEmail = string | null;
+
+export type FactoryCreateRequestTaxId = string | null;
+
+export type FactoryCreateRequestLogoUrl = string | null;
+
+export interface FactoryCreateRequest {
+  name: string;
+  legal_name?: FactoryCreateRequestLegalName;
+  address_line1?: FactoryCreateRequestAddressLine1;
+  address_line2?: FactoryCreateRequestAddressLine2;
+  city?: FactoryCreateRequestCity;
+  state?: FactoryCreateRequestState;
+  postal_code?: FactoryCreateRequestPostalCode;
+  country?: string;
+  phone?: FactoryCreateRequestPhone;
+  email?: FactoryCreateRequestEmail;
+  tax_id?: FactoryCreateRequestTaxId;
+  logo_url?: FactoryCreateRequestLogoUrl;
+  currency?: string;
+  fiscal_year_start_month?: number;
+}
+
+export type FactoryOutLegalName = string | null;
+
+export type FactoryOutAddressLine1 = string | null;
+
+export type FactoryOutAddressLine2 = string | null;
+
+export type FactoryOutCity = string | null;
+
+export type FactoryOutState = string | null;
+
+export type FactoryOutPostalCode = string | null;
+
+export type FactoryOutPhone = string | null;
+
+export type FactoryOutEmail = string | null;
+
+export type FactoryOutTaxId = string | null;
+
+export type FactoryOutLogoUrl = string | null;
+
+export interface FactoryOut {
+  id: string;
+  name: string;
+  legal_name: FactoryOutLegalName;
+  address_line1: FactoryOutAddressLine1;
+  address_line2: FactoryOutAddressLine2;
+  city: FactoryOutCity;
+  state: FactoryOutState;
+  postal_code: FactoryOutPostalCode;
+  country: string;
+  phone: FactoryOutPhone;
+  email: FactoryOutEmail;
+  tax_id: FactoryOutTaxId;
+  logo_url: FactoryOutLogoUrl;
+  currency: string;
+  fiscal_year_start_month: number;
+  is_active: boolean;
+}
+
+export type FactoryUpdateRequestName = string | null;
+
+export type FactoryUpdateRequestLegalName = string | null;
+
+export type FactoryUpdateRequestAddressLine1 = string | null;
+
+export type FactoryUpdateRequestAddressLine2 = string | null;
+
+export type FactoryUpdateRequestCity = string | null;
+
+export type FactoryUpdateRequestState = string | null;
+
+export type FactoryUpdateRequestPostalCode = string | null;
+
+export type FactoryUpdateRequestCountry = string | null;
+
+export type FactoryUpdateRequestPhone = string | null;
+
+export type FactoryUpdateRequestEmail = string | null;
+
+export type FactoryUpdateRequestTaxId = string | null;
+
+export type FactoryUpdateRequestLogoUrl = string | null;
+
+export type FactoryUpdateRequestCurrency = string | null;
+
+export type FactoryUpdateRequestFiscalYearStartMonth = number | null;
+
+export type FactoryUpdateRequestIsActive = boolean | null;
+
+export interface FactoryUpdateRequest {
+  name?: FactoryUpdateRequestName;
+  legal_name?: FactoryUpdateRequestLegalName;
+  address_line1?: FactoryUpdateRequestAddressLine1;
+  address_line2?: FactoryUpdateRequestAddressLine2;
+  city?: FactoryUpdateRequestCity;
+  state?: FactoryUpdateRequestState;
+  postal_code?: FactoryUpdateRequestPostalCode;
+  country?: FactoryUpdateRequestCountry;
+  phone?: FactoryUpdateRequestPhone;
+  email?: FactoryUpdateRequestEmail;
+  tax_id?: FactoryUpdateRequestTaxId;
+  logo_url?: FactoryUpdateRequestLogoUrl;
+  currency?: FactoryUpdateRequestCurrency;
+  fiscal_year_start_month?: FactoryUpdateRequestFiscalYearStartMonth;
+  is_active?: FactoryUpdateRequestIsActive;
 }
 
 export interface ForgotPasswordRequest {
@@ -30,6 +293,95 @@ export interface LoginRequest {
   email: string;
   password: string;
   totp_code?: LoginRequestTotpCode;
+}
+
+export type MachineCreateRequestName = string | null;
+
+export type MachineCreateRequestMachineType = string | null;
+
+export type MachineCreateRequestNumberOfHeads = number | null;
+
+export type MachineCreateRequestBrand = string | null;
+
+export type MachineCreateRequestModel = string | null;
+
+export type MachineCreateRequestPurchaseDate = string | null;
+
+export type MachineCreateRequestNotes = string | null;
+
+export interface MachineCreateRequest {
+  branch_id: string;
+  code: string;
+  name?: MachineCreateRequestName;
+  machine_type?: MachineCreateRequestMachineType;
+  number_of_heads?: MachineCreateRequestNumberOfHeads;
+  brand?: MachineCreateRequestBrand;
+  model?: MachineCreateRequestModel;
+  purchase_date?: MachineCreateRequestPurchaseDate;
+  status?: string;
+  notes?: MachineCreateRequestNotes;
+}
+
+export type MachineOutName = string | null;
+
+export type MachineOutMachineType = string | null;
+
+export type MachineOutNumberOfHeads = number | null;
+
+export type MachineOutBrand = string | null;
+
+export type MachineOutModel = string | null;
+
+export type MachineOutPurchaseDate = string | null;
+
+export type MachineOutNotes = string | null;
+
+export interface MachineOut {
+  id: string;
+  branch_id: string;
+  code: string;
+  name: MachineOutName;
+  machine_type: MachineOutMachineType;
+  number_of_heads: MachineOutNumberOfHeads;
+  brand: MachineOutBrand;
+  model: MachineOutModel;
+  purchase_date: MachineOutPurchaseDate;
+  status: string;
+  notes: MachineOutNotes;
+  is_active: boolean;
+}
+
+export type MachineUpdateRequestCode = string | null;
+
+export type MachineUpdateRequestName = string | null;
+
+export type MachineUpdateRequestMachineType = string | null;
+
+export type MachineUpdateRequestNumberOfHeads = number | null;
+
+export type MachineUpdateRequestBrand = string | null;
+
+export type MachineUpdateRequestModel = string | null;
+
+export type MachineUpdateRequestPurchaseDate = string | null;
+
+export type MachineUpdateRequestStatus = string | null;
+
+export type MachineUpdateRequestNotes = string | null;
+
+export type MachineUpdateRequestIsActive = boolean | null;
+
+export interface MachineUpdateRequest {
+  code?: MachineUpdateRequestCode;
+  name?: MachineUpdateRequestName;
+  machine_type?: MachineUpdateRequestMachineType;
+  number_of_heads?: MachineUpdateRequestNumberOfHeads;
+  brand?: MachineUpdateRequestBrand;
+  model?: MachineUpdateRequestModel;
+  purchase_date?: MachineUpdateRequestPurchaseDate;
+  status?: MachineUpdateRequestStatus;
+  notes?: MachineUpdateRequestNotes;
+  is_active?: MachineUpdateRequestIsActive;
 }
 
 export type PartyCreateRequestContactPerson = string | null;
@@ -335,6 +687,50 @@ export type DisableTotp200 = { [key: string]: unknown };
 export type AssignRole200 = { [key: string]: unknown };
 
 export type UnassignRole200 = { [key: string]: unknown };
+
+export type ListBranchesParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+is_active?: boolean;
+name?: string | null;
+};
+
+export type ListMachinesParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+is_active?: boolean;
+code?: string | null;
+branch_id?: string | null;
+};
+
+export type ListEmployeesParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+is_active?: boolean;
+full_name?: string | null;
+branch_id?: string | null;
+};
 
 export type ListPartiesParams = {
 /**
@@ -830,6 +1226,398 @@ export const getMyPermissions = async ( options?: RequestInit): Promise<Effectiv
     method: 'GET'
     
     
+  }
+);}
+
+
+
+/**
+ * @summary Get Factory
+ */
+export const getGetFactoryUrl = () => {
+
+
+  
+
+  return `/factory`
+}
+
+export const getFactory = async ( options?: RequestInit): Promise<FactoryOut> => {
+  
+  return apiMutator<FactoryOut>(getGetFactoryUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Factory
+ */
+export const getCreateFactoryUrl = () => {
+
+
+  
+
+  return `/factory`
+}
+
+export const createFactory = async (factoryCreateRequest: FactoryCreateRequest, options?: RequestInit): Promise<FactoryOut> => {
+  
+  return apiMutator<FactoryOut>(getCreateFactoryUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      factoryCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Update Factory
+ */
+export const getUpdateFactoryUrl = () => {
+
+
+  
+
+  return `/factory`
+}
+
+export const updateFactory = async (factoryUpdateRequest: FactoryUpdateRequest, options?: RequestInit): Promise<FactoryOut> => {
+  
+  return apiMutator<FactoryOut>(getUpdateFactoryUrl(),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      factoryUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List Branches
+ */
+export const getListBranchesUrl = (params?: ListBranchesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/branches?${stringifiedParams}` : `/branches`
+}
+
+export const listBranches = async (params?: ListBranchesParams, options?: RequestInit): Promise<BranchOut[]> => {
+  
+  return apiMutator<BranchOut[]>(getListBranchesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Branch
+ */
+export const getCreateBranchUrl = () => {
+
+
+  
+
+  return `/branches`
+}
+
+export const createBranch = async (branchCreateRequest: BranchCreateRequest, options?: RequestInit): Promise<BranchOut> => {
+  
+  return apiMutator<BranchOut>(getCreateBranchUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      branchCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Branch
+ */
+export const getGetBranchUrl = (branchId: string,) => {
+
+
+  
+
+  return `/branches/${branchId}`
+}
+
+export const getBranch = async (branchId: string, options?: RequestInit): Promise<BranchOut> => {
+  
+  return apiMutator<BranchOut>(getGetBranchUrl(branchId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Update Branch
+ */
+export const getUpdateBranchUrl = (branchId: string,) => {
+
+
+  
+
+  return `/branches/${branchId}`
+}
+
+export const updateBranch = async (branchId: string,
+    branchUpdateRequest: BranchUpdateRequest, options?: RequestInit): Promise<BranchOut> => {
+  
+  return apiMutator<BranchOut>(getUpdateBranchUrl(branchId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      branchUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List Machines
+ */
+export const getListMachinesUrl = (params?: ListMachinesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/machines?${stringifiedParams}` : `/machines`
+}
+
+export const listMachines = async (params?: ListMachinesParams, options?: RequestInit): Promise<MachineOut[]> => {
+  
+  return apiMutator<MachineOut[]>(getListMachinesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Machine
+ */
+export const getCreateMachineUrl = () => {
+
+
+  
+
+  return `/machines`
+}
+
+export const createMachine = async (machineCreateRequest: MachineCreateRequest, options?: RequestInit): Promise<MachineOut> => {
+  
+  return apiMutator<MachineOut>(getCreateMachineUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      machineCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Machine
+ */
+export const getGetMachineUrl = (machineId: string,) => {
+
+
+  
+
+  return `/machines/${machineId}`
+}
+
+export const getMachine = async (machineId: string, options?: RequestInit): Promise<MachineOut> => {
+  
+  return apiMutator<MachineOut>(getGetMachineUrl(machineId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Update Machine
+ */
+export const getUpdateMachineUrl = (machineId: string,) => {
+
+
+  
+
+  return `/machines/${machineId}`
+}
+
+export const updateMachine = async (machineId: string,
+    machineUpdateRequest: MachineUpdateRequest, options?: RequestInit): Promise<MachineOut> => {
+  
+  return apiMutator<MachineOut>(getUpdateMachineUrl(machineId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      machineUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List Employees
+ */
+export const getListEmployeesUrl = (params?: ListEmployeesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/employees?${stringifiedParams}` : `/employees`
+}
+
+export const listEmployees = async (params?: ListEmployeesParams, options?: RequestInit): Promise<EmployeeOut[]> => {
+  
+  return apiMutator<EmployeeOut[]>(getListEmployeesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Employee
+ */
+export const getCreateEmployeeUrl = () => {
+
+
+  
+
+  return `/employees`
+}
+
+export const createEmployee = async (employeeCreateRequest: EmployeeCreateRequest, options?: RequestInit): Promise<EmployeeOut> => {
+  
+  return apiMutator<EmployeeOut>(getCreateEmployeeUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      employeeCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Employee
+ */
+export const getGetEmployeeUrl = (employeeId: string,) => {
+
+
+  
+
+  return `/employees/${employeeId}`
+}
+
+export const getEmployee = async (employeeId: string, options?: RequestInit): Promise<EmployeeOut> => {
+  
+  return apiMutator<EmployeeOut>(getGetEmployeeUrl(employeeId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Update Employee
+ */
+export const getUpdateEmployeeUrl = (employeeId: string,) => {
+
+
+  
+
+  return `/employees/${employeeId}`
+}
+
+export const updateEmployee = async (employeeId: string,
+    employeeUpdateRequest: EmployeeUpdateRequest, options?: RequestInit): Promise<EmployeeOut> => {
+  
+  return apiMutator<EmployeeOut>(getUpdateEmployeeUrl(employeeId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      employeeUpdateRequest,)
   }
 );}
 
