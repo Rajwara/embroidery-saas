@@ -67,6 +67,73 @@ export interface BranchUpdateRequest {
   is_active?: BranchUpdateRequestIsActive;
 }
 
+export type DesignCreateRequestNotes = string | null;
+
+export interface DesignCreateRequest {
+  master_number: string;
+  name: string;
+  notes?: DesignCreateRequestNotes;
+}
+
+export type DesignDetailOutNotes = string | null;
+
+/**
+ * Used by GET /designs/{id} -- built manually by the router (no ORM
+relationship defined on Design), not derived automatically from
+response_model attribute access.
+ */
+export interface DesignDetailOut {
+  id: string;
+  master_number: string;
+  name: string;
+  notes: DesignDetailOutNotes;
+  variants: DesignVariantOut[];
+}
+
+export type DesignOutNotes = string | null;
+
+export interface DesignOut {
+  id: string;
+  master_number: string;
+  name: string;
+  notes: DesignOutNotes;
+}
+
+export type DesignUpdateRequestName = string | null;
+
+export type DesignUpdateRequestNotes = string | null;
+
+export interface DesignUpdateRequest {
+  name?: DesignUpdateRequestName;
+  notes?: DesignUpdateRequestNotes;
+}
+
+export type DesignVariantCreateRequestComponentType = typeof DesignVariantCreateRequestComponentType[keyof typeof DesignVariantCreateRequestComponentType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const DesignVariantCreateRequestComponentType = {
+  front: 'front',
+  back: 'back',
+  sleeves: 'sleeves',
+  trouser: 'trouser',
+  dupatta: 'dupatta',
+} as const;
+
+export interface DesignVariantCreateRequest {
+  component_type: DesignVariantCreateRequestComponentType;
+  colour_variant_code: string;
+}
+
+export interface DesignVariantOut {
+  id: string;
+  design_id: string;
+  component_type: string;
+  component_letter: string;
+  colour_variant_code: string;
+  variant_code: string;
+}
+
 export interface EffectivePermissionsResponse {
   user_id: string;
   is_super_admin: boolean;
@@ -883,6 +950,19 @@ skip?: number;
 limit?: number;
 party_id?: string | null;
 status?: string | null;
+};
+
+export type ListDesignsParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+master_number?: string | null;
 };
 
 /**
@@ -2187,6 +2267,164 @@ export const confirmLot = async (lotId: string, options?: RequestInit): Promise<
   {      
     ...options,
     method: 'POST'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Designs
+ */
+export const getListDesignsUrl = (params?: ListDesignsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/designs?${stringifiedParams}` : `/designs`
+}
+
+export const listDesigns = async (params?: ListDesignsParams, options?: RequestInit): Promise<DesignOut[]> => {
+  
+  return apiMutator<DesignOut[]>(getListDesignsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Design
+ */
+export const getCreateDesignUrl = () => {
+
+
+  
+
+  return `/designs`
+}
+
+export const createDesign = async (designCreateRequest: DesignCreateRequest, options?: RequestInit): Promise<DesignOut> => {
+  
+  return apiMutator<DesignOut>(getCreateDesignUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      designCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Design
+ */
+export const getGetDesignUrl = (designId: string,) => {
+
+
+  
+
+  return `/designs/${designId}`
+}
+
+export const getDesign = async (designId: string, options?: RequestInit): Promise<DesignDetailOut> => {
+  
+  return apiMutator<DesignDetailOut>(getGetDesignUrl(designId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Update Design
+ */
+export const getUpdateDesignUrl = (designId: string,) => {
+
+
+  
+
+  return `/designs/${designId}`
+}
+
+export const updateDesign = async (designId: string,
+    designUpdateRequest: DesignUpdateRequest, options?: RequestInit): Promise<DesignOut> => {
+  
+  return apiMutator<DesignOut>(getUpdateDesignUrl(designId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      designUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Add Design Variant
+ */
+export const getAddDesignVariantUrl = (designId: string,) => {
+
+
+  
+
+  return `/designs/${designId}/variants`
+}
+
+export const addDesignVariant = async (designId: string,
+    designVariantCreateRequest: DesignVariantCreateRequest, options?: RequestInit): Promise<DesignVariantOut> => {
+  
+  return apiMutator<DesignVariantOut>(getAddDesignVariantUrl(designId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      designVariantCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Remove Design Variant
+ */
+export const getRemoveDesignVariantUrl = (designId: string,
+    variantId: string,) => {
+
+
+  
+
+  return `/designs/${designId}/variants/${variantId}`
+}
+
+export const removeDesignVariant = async (designId: string,
+    variantId: string, options?: RequestInit): Promise<void> => {
+  
+  return apiMutator<void>(getRemoveDesignVariantUrl(designId,variantId),
+  {      
+    ...options,
+    method: 'DELETE'
     
     
   }

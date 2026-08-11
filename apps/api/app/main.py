@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import auth, branches, employees, factory, lots, machines, parties, roles, suppliers
+from app.routers import auth, branches, designs, employees, factory, lots, machines, parties, roles, suppliers
 
 settings = get_settings()
 
@@ -31,3 +31,4 @@ app.include_router(employees.router, prefix="/employees", tags=["employees"])
 app.include_router(parties.router, prefix="/parties", tags=["parties"])
 app.include_router(suppliers.router, prefix="/suppliers", tags=["suppliers"])
 app.include_router(lots.router, prefix="/lots", tags=["lots"])
+app.include_router(designs.router, prefix="/designs", tags=["designs"])

@@ -1,6 +1,8 @@
 from app.models.audit_log import AuditLog
 from app.models.base import Base
 from app.models.branch import Branch
+from app.models.design import Design
+from app.models.design_variant import DesignVariant
 from app.models.employee import Employee
 from app.models.factory import Factory
 from app.models.login_history import LoginHistory
@@ -29,6 +31,8 @@ __all__ = [
     "Lot",
     "LotColour",
     "LotComponent",
+    "Design",
+    "DesignVariant",
     "AuditLog",
     "LoginHistory",
     "PasswordResetToken",
