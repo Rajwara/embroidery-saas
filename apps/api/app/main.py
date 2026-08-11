@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import auth, roles
+from app.routers import auth, parties, roles, suppliers
 
 settings = get_settings()
 
@@ -24,3 +24,5 @@ def health() -> dict:
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(roles.router, tags=["roles"])
+app.include_router(parties.router, prefix="/parties", tags=["parties"])
+app.include_router(suppliers.router, prefix="/suppliers", tags=["suppliers"])
