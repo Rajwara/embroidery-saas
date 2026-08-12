@@ -13,6 +13,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Jobs", href: "/jobs", requiredPermission: "production_jobs.view" },
   { label: "Daily Shift", href: "/shift", requiredPermission: "production_entries.create" },
   { label: "Approvals", href: "/approvals", requiredPermission: "production_entries.approve" },
+  { label: "Machine Performance", href: "/performance/machines", requiredPermission: "production_entries.view" },
+  { label: "Employee Performance", href: "/performance/employees", requiredPermission: "production_entries.view" },
   { label: "Branches", href: "/branches", requiredPermission: "branches.view" },
   { label: "Machines", href: "/machines", requiredPermission: "machines.view" },
   { label: "Employees", href: "/employees", requiredPermission: "employees.view" },
