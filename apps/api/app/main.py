@@ -11,6 +11,7 @@ from app.routers import (
     lots,
     machines,
     parties,
+    production_entries,
     production_jobs,
     roles,
     suppliers,
@@ -45,3 +46,4 @@ app.include_router(suppliers.router, prefix="/suppliers", tags=["suppliers"])
 app.include_router(lots.router, prefix="/lots", tags=["lots"])
 app.include_router(designs.router, prefix="/designs", tags=["designs"])
 app.include_router(production_jobs.router, prefix="/production-jobs", tags=["production-jobs"])
+app.include_router(production_entries.router, prefix="/production-entries", tags=["production-entries"])

@@ -540,6 +540,57 @@ export interface MachineOut {
   is_active: boolean;
 }
 
+export type MachineProductionEntryCreateRequestShift = typeof MachineProductionEntryCreateRequestShift[keyof typeof MachineProductionEntryCreateRequestShift];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const MachineProductionEntryCreateRequestShift = {
+  morning: 'morning',
+  evening: 'evening',
+  night: 'night',
+} as const;
+
+export type MachineProductionEntryCreateRequestHelperEmployeeId = string | null;
+
+export type MachineProductionEntryCreateRequestNotes = string | null;
+
+export interface MachineProductionEntryCreateRequest {
+  production_job_machine_allocation_id: string;
+  entry_date: string;
+  shift: MachineProductionEntryCreateRequestShift;
+  operator_employee_id: string;
+  helper_employee_id?: MachineProductionEntryCreateRequestHelperEmployeeId;
+  quantity: number;
+  notes?: MachineProductionEntryCreateRequestNotes;
+}
+
+export type MachineProductionEntryOutHelperEmployeeId = string | null;
+
+export type MachineProductionEntryOutRejectionReason = string | null;
+
+export type MachineProductionEntryOutNotes = string | null;
+
+export type MachineProductionEntryOutHelperName = string | null;
+
+export interface MachineProductionEntryOut {
+  id: string;
+  production_job_machine_allocation_id: string;
+  entry_date: string;
+  shift: string;
+  operator_employee_id: string;
+  helper_employee_id: MachineProductionEntryOutHelperEmployeeId;
+  quantity: number;
+  status: string;
+  rejection_reason: MachineProductionEntryOutRejectionReason;
+  notes: MachineProductionEntryOutNotes;
+  machine_id: string;
+  machine_code: string;
+  production_job_id: string;
+  component_type: string;
+  operator_name: string;
+  helper_name: MachineProductionEntryOutHelperName;
+}
+
 export type MachineUpdateRequestCode = string | null;
 
 export type MachineUpdateRequestName = string | null;
@@ -747,6 +798,12 @@ export interface ProductionJobOut {
 
 export interface RefreshRequest {
   refresh_token: string;
+}
+
+export type RejectEntryRequestReason = string | null;
+
+export interface RejectEntryRequest {
+  reason?: RejectEntryRequestReason;
 }
 
 export interface ResetPasswordRequest {
@@ -1038,6 +1095,23 @@ skip?: number;
 limit?: number;
 lot_colour_id?: string | null;
 status?: string | null;
+};
+
+export type ListProductionEntriesParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+status?: string | null;
+entry_date?: string | null;
+shift?: string | null;
+machine_id?: string | null;
+operator_employee_id?: string | null;
 };
 
 /**
@@ -2610,5 +2684,135 @@ export const allocateProductionJobComponent = async (jobId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       allocateComponentRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List Production Entries
+ */
+export const getListProductionEntriesUrl = (params?: ListProductionEntriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/production-entries?${stringifiedParams}` : `/production-entries`
+}
+
+export const listProductionEntries = async (params?: ListProductionEntriesParams, options?: RequestInit): Promise<MachineProductionEntryOut[]> => {
+  
+  return apiMutator<MachineProductionEntryOut[]>(getListProductionEntriesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Production Entry
+ */
+export const getCreateProductionEntryUrl = () => {
+
+
+  
+
+  return `/production-entries`
+}
+
+export const createProductionEntry = async (machineProductionEntryCreateRequest: MachineProductionEntryCreateRequest, options?: RequestInit): Promise<MachineProductionEntryOut> => {
+  
+  return apiMutator<MachineProductionEntryOut>(getCreateProductionEntryUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      machineProductionEntryCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Production Entry
+ */
+export const getGetProductionEntryUrl = (entryId: string,) => {
+
+
+  
+
+  return `/production-entries/${entryId}`
+}
+
+export const getProductionEntry = async (entryId: string, options?: RequestInit): Promise<MachineProductionEntryOut> => {
+  
+  return apiMutator<MachineProductionEntryOut>(getGetProductionEntryUrl(entryId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Approve Production Entry
+ */
+export const getApproveProductionEntryUrl = (entryId: string,) => {
+
+
+  
+
+  return `/production-entries/${entryId}/approve`
+}
+
+export const approveProductionEntry = async (entryId: string, options?: RequestInit): Promise<MachineProductionEntryOut> => {
+  
+  return apiMutator<MachineProductionEntryOut>(getApproveProductionEntryUrl(entryId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Reject Production Entry
+ */
+export const getRejectProductionEntryUrl = (entryId: string,) => {
+
+
+  
+
+  return `/production-entries/${entryId}/reject`
+}
+
+export const rejectProductionEntry = async (entryId: string,
+    rejectEntryRequest: RejectEntryRequest, options?: RequestInit): Promise<MachineProductionEntryOut> => {
+  
+  return apiMutator<MachineProductionEntryOut>(getRejectProductionEntryUrl(entryId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      rejectEntryRequest,)
   }
 );}

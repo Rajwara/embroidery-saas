@@ -1,0 +1,282 @@
+import uuid
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from app.audit import client_meta, record_audit
+from app.db import get_db, set_tenant_context
+from app.dependencies import require_permission
+from app.models import (
+    Employee,
+    Machine,
+    MachineProductionEntry,
+    ProductionJobComponent,
+    ProductionJobMachineAllocation,
+    User,
+)
+from app.schemas.production_entry import (
+    MachineProductionEntryCreateRequest,
+    MachineProductionEntryOut,
+    RejectEntryRequest,
+)
+
+router = APIRouter()
+
+
+def _to_entry_out(
+    entry: MachineProductionEntry,
+    allocation: ProductionJobMachineAllocation,
+    component: ProductionJobComponent,
+    machine: Machine,
+    operator: Employee,
+    helper: Employee | None,
+) -> MachineProductionEntryOut:
+    return MachineProductionEntryOut(
+        id=entry.id,
+        production_job_machine_allocation_id=entry.production_job_machine_allocation_id,
+        entry_date=entry.entry_date,
+        shift=entry.shift,
+        operator_employee_id=entry.operator_employee_id,
+        helper_employee_id=entry.helper_employee_id,
+        quantity=entry.quantity,
+        status=entry.status,
+        rejection_reason=entry.rejection_reason,
+        notes=entry.notes,
+        machine_id=machine.id,
+        machine_code=machine.code,
+        production_job_id=component.production_job_id,
+        component_type=component.component_type,
+        operator_name=operator.full_name,
+        helper_name=helper.full_name if helper is not None else None,
+    )
+
+
+def _entry_out_by_id(db: Session, entry: MachineProductionEntry) -> MachineProductionEntryOut:
+    allocation = db.get(ProductionJobMachineAllocation, entry.production_job_machine_allocation_id)
+    component = db.get(ProductionJobComponent, allocation.production_job_component_id)
+    machine = db.get(Machine, allocation.machine_id)
+    operator = db.get(Employee, entry.operator_employee_id)
+    helper = db.get(Employee, entry.helper_employee_id) if entry.helper_employee_id else None
+    return _to_entry_out(entry, allocation, component, machine, operator, helper)
+
+
+@router.get("", response_model=list[MachineProductionEntryOut], operation_id="listProductionEntries")
+def list_production_entries(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: str | None = Query(None, alias="status"),
+    entry_date: date | None = None,
+    shift: str | None = None,
+    machine_id: uuid.UUID | None = None,
+    operator_employee_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("production_entries.view")),
+) -> list[MachineProductionEntryOut]:
+    query = (
+        db.query(MachineProductionEntry, ProductionJobMachineAllocation, ProductionJobComponent, Machine, Employee)
+        .join(
+            ProductionJobMachineAllocation,
+            MachineProductionEntry.production_job_machine_allocation_id == ProductionJobMachineAllocation.id,
+        )
+        .join(
+            ProductionJobComponent,
+            ProductionJobMachineAllocation.production_job_component_id == ProductionJobComponent.id,
+        )
+        .join(Machine, ProductionJobMachineAllocation.machine_id == Machine.id)
+        .join(Employee, MachineProductionEntry.operator_employee_id == Employee.id)
+    )
+    if status_filter:
+        query = query.filter(MachineProductionEntry.status == status_filter)
+    if entry_date:
+        query = query.filter(MachineProductionEntry.entry_date == entry_date)
+    if shift:
+        query = query.filter(MachineProductionEntry.shift == shift)
+    if machine_id:
+        query = query.filter(ProductionJobMachineAllocation.machine_id == machine_id)
+    if operator_employee_id:
+        query = query.filter(MachineProductionEntry.operator_employee_id == operator_employee_id)
+
+    rows = (
+        query.order_by(MachineProductionEntry.entry_date.desc(), MachineProductionEntry.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    helper_ids = {entry.helper_employee_id for entry, *_ in rows if entry.helper_employee_id is not None}
+    helpers = {e.id: e for e in db.query(Employee).filter(Employee.id.in_(helper_ids)).all()} if helper_ids else {}
+
+    return [
+        _to_entry_out(entry, allocation, component, machine, operator, helpers.get(entry.helper_employee_id))
+        for entry, allocation, component, machine, operator in rows
+    ]
+
+
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=MachineProductionEntryOut,
+    operation_id="createProductionEntry",
+)
+def create_production_entry(
+    payload: MachineProductionEntryCreateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("production_entries.create")),
+) -> MachineProductionEntryOut:
+    allocation = db.get(ProductionJobMachineAllocation, payload.production_job_machine_allocation_id)
+    if allocation is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="allocation_not_found")
+    component = db.get(ProductionJobComponent, allocation.production_job_component_id)
+    machine = db.get(Machine, allocation.machine_id)
+
+    operator = db.get(Employee, payload.operator_employee_id)
+    if operator is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="operator_not_found")
+
+    helper = None
+    if payload.helper_employee_id is not None:
+        helper = db.get(Employee, payload.helper_employee_id)
+        if helper is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="helper_not_found")
+
+    if payload.quantity <= 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="quantity_must_be_positive")
+
+    entry = MachineProductionEntry(
+        tenant_id=user.tenant_id,
+        production_job_machine_allocation_id=allocation.id,
+        entry_date=payload.entry_date,
+        shift=payload.shift,
+        operator_employee_id=payload.operator_employee_id,
+        helper_employee_id=payload.helper_employee_id,
+        quantity=payload.quantity,
+        status="pending",
+        notes=payload.notes,
+    )
+    db.add(entry)
+    db.flush()  # populate entry.id -- Python-side default, not set until flush
+
+    ip_address, user_agent = client_meta(request)
+    record_audit(
+        db,
+        tenant_id=user.tenant_id,
+        actor_user_id=user.id,
+        action="create",
+        entity_type="production_entry",
+        entity_id=entry.id,
+        new_values={
+            "production_job_machine_allocation_id": str(allocation.id),
+            "entry_date": str(payload.entry_date),
+            "shift": payload.shift,
+            "quantity": payload.quantity,
+        },
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(entry)
+    return _to_entry_out(entry, allocation, component, machine, operator, helper)
+
+
+@router.get("/{entry_id}", response_model=MachineProductionEntryOut, operation_id="getProductionEntry")
+def get_production_entry(
+    entry_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("production_entries.view")),
+) -> MachineProductionEntryOut:
+    entry = db.get(MachineProductionEntry, entry_id)
+    if entry is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="entry_not_found")
+    return _entry_out_by_id(db, entry)
+
+
+@router.post("/{entry_id}/approve", response_model=MachineProductionEntryOut, operation_id="approveProductionEntry")
+def approve_production_entry(
+    entry_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("production_entries.approve")),
+) -> MachineProductionEntryOut:
+    entry = db.get(MachineProductionEntry, entry_id)
+    if entry is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="entry_not_found")
+    if entry.status != "pending":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="entry_not_pending")
+
+    allocation = db.get(ProductionJobMachineAllocation, entry.production_job_machine_allocation_id)
+
+    # Cap: the sum of already-approved entries for this allocation plus this
+    # one can't exceed the allocation's allocated_quantity (see
+    # [[domain_production_entry]] memory -- pending entries don't count
+    # toward this cap, only approved ones).
+    already_approved = (
+        db.query(func.coalesce(func.sum(MachineProductionEntry.quantity), 0))
+        .filter(
+            MachineProductionEntry.production_job_machine_allocation_id == allocation.id,
+            MachineProductionEntry.status == "approved",
+        )
+        .scalar()
+    )
+    if already_approved + entry.quantity > allocation.allocated_quantity:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="quantity_exceeds_allocation")
+
+    entry.status = "approved"
+
+    ip_address, user_agent = client_meta(request)
+    record_audit(
+        db,
+        tenant_id=user.tenant_id,
+        actor_user_id=user.id,
+        action="approve",
+        entity_type="production_entry",
+        entity_id=entry.id,
+        new_values={"status": "approved"},
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(entry)
+    return _entry_out_by_id(db, entry)
+
+
+@router.post("/{entry_id}/reject", response_model=MachineProductionEntryOut, operation_id="rejectProductionEntry")
+def reject_production_entry(
+    entry_id: uuid.UUID,
+    payload: RejectEntryRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("production_entries.approve")),
+) -> MachineProductionEntryOut:
+    entry = db.get(MachineProductionEntry, entry_id)
+    if entry is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="entry_not_found")
+    if entry.status != "pending":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="entry_not_pending")
+
+    entry.status = "rejected"
+    entry.rejection_reason = payload.reason
+
+    ip_address, user_agent = client_meta(request)
+    record_audit(
+        db,
+        tenant_id=user.tenant_id,
+        actor_user_id=user.id,
+        action="reject",
+        entity_type="production_entry",
+        entity_id=entry.id,
+        new_values={"status": "rejected", "rejection_reason": payload.reason},
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(entry)
+    return _entry_out_by_id(db, entry)

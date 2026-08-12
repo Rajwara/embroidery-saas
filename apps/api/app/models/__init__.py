@@ -10,6 +10,7 @@ from app.models.lot import Lot
 from app.models.lot_colour import LotColour
 from app.models.lot_component import LotComponent
 from app.models.machine import Machine
+from app.models.machine_production_entry import MachineProductionEntry
 from app.models.party import Party
 from app.models.password_reset_token import PasswordResetToken
 from app.models.permission_override import UserPermissionOverride
@@ -43,4 +44,5 @@ __all__ = [
     "ProductionJob",
     "ProductionJobComponent",
     "ProductionJobMachineAllocation",
+    "MachineProductionEntry",
 ]
