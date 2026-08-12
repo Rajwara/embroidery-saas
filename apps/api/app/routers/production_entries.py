@@ -71,6 +71,7 @@ def list_production_entries(
     shift: str | None = None,
     machine_id: uuid.UUID | None = None,
     operator_employee_id: uuid.UUID | None = None,
+    production_job_machine_allocation_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
     _user: User = Depends(require_permission("production_entries.view")),
 ) -> list[MachineProductionEntryOut]:
@@ -97,6 +98,10 @@ def list_production_entries(
         query = query.filter(ProductionJobMachineAllocation.machine_id == machine_id)
     if operator_employee_id:
         query = query.filter(MachineProductionEntry.operator_employee_id == operator_employee_id)
+    if production_job_machine_allocation_id:
+        query = query.filter(
+            MachineProductionEntry.production_job_machine_allocation_id == production_job_machine_allocation_id
+        )
 
     rows = (
         query.order_by(MachineProductionEntry.entry_date.desc(), MachineProductionEntry.created_at.desc())

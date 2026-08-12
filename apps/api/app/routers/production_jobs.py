@@ -13,6 +13,7 @@ from app.models import (
     LotColour,
     LotComponent,
     Machine,
+    MachineProductionEntry,
     ProductionJob,
     ProductionJobComponent,
     ProductionJobMachineAllocation,
@@ -59,6 +60,27 @@ def _job_out_by_id(db: Session, job: ProductionJob) -> ProductionJobOut:
     return _to_job_out(job, colour, lot, design)
 
 
+def _allocation_out(db: Session, allocation: ProductionJobMachineAllocation) -> ProductionJobMachineAllocationOut:
+    machine = db.get(Machine, allocation.machine_id)
+    approved_quantity = (
+        db.query(func.coalesce(func.sum(MachineProductionEntry.quantity), 0))
+        .filter(
+            MachineProductionEntry.production_job_machine_allocation_id == allocation.id,
+            MachineProductionEntry.status == "approved",
+        )
+        .scalar()
+    )
+    return ProductionJobMachineAllocationOut(
+        id=allocation.id,
+        production_job_component_id=allocation.production_job_component_id,
+        machine_id=allocation.machine_id,
+        allocated_quantity=allocation.allocated_quantity,
+        machine_code=machine.code,
+        approved_quantity=approved_quantity,
+        remaining_quantity=allocation.allocated_quantity - approved_quantity,
+    )
+
+
 def _component_with_allocations(db: Session, component: ProductionJobComponent) -> ProductionJobComponentWithAllocationsOut:
     allocations = (
         db.query(ProductionJobMachineAllocation)
@@ -68,7 +90,7 @@ def _component_with_allocations(db: Session, component: ProductionJobComponent) 
     )
     return ProductionJobComponentWithAllocationsOut(
         **ProductionJobComponentOut.model_validate(component).model_dump(),
-        allocations=[ProductionJobMachineAllocationOut.model_validate(a) for a in allocations],
+        allocations=[_allocation_out(db, a) for a in allocations],
     )
 
 

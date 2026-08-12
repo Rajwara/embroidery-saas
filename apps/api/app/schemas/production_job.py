@@ -46,6 +46,15 @@ class ProductionJobMachineAllocationOut(BaseModel):
     production_job_component_id: uuid.UUID
     machine_id: uuid.UUID
     allocated_quantity: int
+    # Denormalized read-only convenience fields -- joined/computed by the
+    # router (see routers/production_jobs.py's _allocation_out), not stored
+    # columns. approved_quantity is the sum of this allocation's *approved*
+    # MachineProductionEntry rows only (see [[domain_production_entry]] --
+    # pending/rejected entries don't count); remaining_quantity is what's
+    # still available to log against without hitting the approval-time cap.
+    machine_code: str
+    approved_quantity: int
+    remaining_quantity: int
 
     model_config = {"from_attributes": True}
 

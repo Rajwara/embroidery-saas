@@ -782,6 +782,9 @@ export interface ProductionJobMachineAllocationOut {
   production_job_component_id: string;
   machine_id: string;
   allocated_quantity: number;
+  machine_code: string;
+  approved_quantity: number;
+  remaining_quantity: number;
 }
 
 export interface ProductionJobOut {
@@ -1112,6 +1115,7 @@ entry_date?: string | null;
 shift?: string | null;
 machine_id?: string | null;
 operator_employee_id?: string | null;
+production_job_machine_allocation_id?: string | null;
 };
 
 /**
