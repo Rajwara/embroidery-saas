@@ -10,6 +10,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Suppliers", href: "/suppliers", requiredPermission: "suppliers.view" },
   { label: "Lots", href: "/lots", requiredPermission: "lots.view" },
   { label: "Designs", href: "/designs", requiredPermission: "designs.view" },
+  { label: "Jobs", href: "/jobs", requiredPermission: "production_jobs.view" },
   { label: "Branches", href: "/branches", requiredPermission: "branches.view" },
   { label: "Machines", href: "/machines", requiredPermission: "machines.view" },
   { label: "Employees", href: "/employees", requiredPermission: "employees.view" },
