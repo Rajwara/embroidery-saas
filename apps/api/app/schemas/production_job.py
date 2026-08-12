@@ -15,6 +15,15 @@ class ProductionJobOut(BaseModel):
     lot_colour_id: uuid.UUID
     design_id: uuid.UUID
     status: str
+    # Denormalized read-only convenience fields -- joined in by the router
+    # (see routers/production_jobs.py's _to_job_out), not stored columns.
+    # Saves the frontend from N+1 lookups since there's no standalone
+    # "list lot colours" endpoint to resolve lot_colour_id into a label.
+    lot_id: uuid.UUID
+    lot_number: str
+    colour_name: str
+    design_master_number: str
+    design_name: str
 
     model_config = {"from_attributes": True}
 

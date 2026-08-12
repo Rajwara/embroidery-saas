@@ -38,6 +38,27 @@ def _split_evenly(target_quantity: int, count: int) -> list[int]:
     return [base + 1 if i < remainder else base for i in range(count)]
 
 
+def _to_job_out(job: ProductionJob, colour: LotColour, lot: Lot, design: Design) -> ProductionJobOut:
+    return ProductionJobOut(
+        id=job.id,
+        lot_colour_id=job.lot_colour_id,
+        design_id=job.design_id,
+        status=job.status,
+        lot_id=lot.id,
+        lot_number=lot.lot_number,
+        colour_name=colour.colour_name,
+        design_master_number=design.master_number,
+        design_name=design.name,
+    )
+
+
+def _job_out_by_id(db: Session, job: ProductionJob) -> ProductionJobOut:
+    colour = db.get(LotColour, job.lot_colour_id)
+    lot = db.get(Lot, colour.lot_id)
+    design = db.get(Design, job.design_id)
+    return _to_job_out(job, colour, lot, design)
+
+
 def _component_with_allocations(db: Session, component: ProductionJobComponent) -> ProductionJobComponentWithAllocationsOut:
     allocations = (
         db.query(ProductionJobMachineAllocation)
@@ -63,7 +84,7 @@ def _build_job_detail(db: Session, job: ProductionJob) -> ProductionJobDetailOut
         .all()
     )
     return ProductionJobDetailOut(
-        **ProductionJobOut.model_validate(job).model_dump(),
+        **_job_out_by_id(db, job).model_dump(),
         components=[_component_with_allocations(db, c) for c in components],
     )
 
@@ -76,13 +97,19 @@ def list_production_jobs(
     status_filter: str | None = Query(None, alias="status"),
     db: Session = Depends(get_db),
     _user: User = Depends(require_permission("production_jobs.view")),
-) -> list[ProductionJob]:
-    query = db.query(ProductionJob)
+) -> list[ProductionJobOut]:
+    query = (
+        db.query(ProductionJob, LotColour, Lot, Design)
+        .join(LotColour, ProductionJob.lot_colour_id == LotColour.id)
+        .join(Lot, LotColour.lot_id == Lot.id)
+        .join(Design, ProductionJob.design_id == Design.id)
+    )
     if lot_colour_id:
         query = query.filter(ProductionJob.lot_colour_id == lot_colour_id)
     if status_filter:
         query = query.filter(ProductionJob.status == status_filter)
-    return query.order_by(ProductionJob.created_at.desc()).offset(skip).limit(limit).all()
+    rows = query.order_by(ProductionJob.created_at.desc()).offset(skip).limit(limit).all()
+    return [_to_job_out(job, colour, lot, design) for job, colour, lot, design in rows]
 
 
 @router.post(
@@ -93,7 +120,7 @@ def create_production_job(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_permission("production_jobs.create")),
-) -> ProductionJob:
+) -> ProductionJobOut:
     lot_colour = db.get(LotColour, payload.lot_colour_id)
     if lot_colour is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="lot_colour_not_found")
@@ -150,7 +177,7 @@ def create_production_job(
     db.commit()
     set_tenant_context(db, str(user.tenant_id))
     db.refresh(job)
-    return job
+    return _to_job_out(job, lot_colour, lot, design)
 
 
 @router.get("/{job_id}", response_model=ProductionJobDetailOut, operation_id="getProductionJob")

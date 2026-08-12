@@ -10,6 +10,10 @@ export interface AccessTokenResponse {
   token_type?: string;
 }
 
+export interface AllocateComponentRequest {
+  allocations: MachineAllocationInput[];
+}
+
 export type BranchCreateRequestAddress = string | null;
 
 export type BranchCreateRequestCity = string | null;
@@ -473,6 +477,13 @@ export interface LotUpdateRequest {
   notes?: LotUpdateRequestNotes;
 }
 
+export type MachineAllocationInputQuantity = number | null;
+
+export interface MachineAllocationInput {
+  machine_id: string;
+  quantity?: MachineAllocationInputQuantity;
+}
+
 export type MachineCreateRequestName = string | null;
 
 export type MachineCreateRequestMachineType = string | null;
@@ -682,6 +693,56 @@ export type PermissionOverrideRequestEffect = 'grant' | 'deny' | null;
 export interface PermissionOverrideRequest {
   permission_code: string;
   effect?: PermissionOverrideRequestEffect;
+}
+
+export interface ProductionJobComponentWithAllocationsOut {
+  id: string;
+  production_job_id: string;
+  component_type: string;
+  target_quantity: number;
+  allocations: ProductionJobMachineAllocationOut[];
+}
+
+export interface ProductionJobCreateRequest {
+  lot_colour_id: string;
+  design_id: string;
+}
+
+/**
+ * Used by GET /production-jobs/{id} -- built manually by the router (no
+ORM relationships defined on ProductionJob/ProductionJobComponent),
+not derived automatically from response_model attribute access.
+ */
+export interface ProductionJobDetailOut {
+  id: string;
+  lot_colour_id: string;
+  design_id: string;
+  status: string;
+  lot_id: string;
+  lot_number: string;
+  colour_name: string;
+  design_master_number: string;
+  design_name: string;
+  components: ProductionJobComponentWithAllocationsOut[];
+}
+
+export interface ProductionJobMachineAllocationOut {
+  id: string;
+  production_job_component_id: string;
+  machine_id: string;
+  allocated_quantity: number;
+}
+
+export interface ProductionJobOut {
+  id: string;
+  lot_colour_id: string;
+  design_id: string;
+  status: string;
+  lot_id: string;
+  lot_number: string;
+  colour_name: string;
+  design_master_number: string;
+  design_name: string;
 }
 
 export interface RefreshRequest {
@@ -963,6 +1024,20 @@ skip?: number;
  */
 limit?: number;
 master_number?: string | null;
+};
+
+export type ListProductionJobsParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+lot_colour_id?: string | null;
+status?: string | null;
 };
 
 /**
@@ -2427,5 +2502,113 @@ export const removeDesignVariant = async (designId: string,
     method: 'DELETE'
     
     
+  }
+);}
+
+
+
+/**
+ * @summary List Production Jobs
+ */
+export const getListProductionJobsUrl = (params?: ListProductionJobsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/production-jobs?${stringifiedParams}` : `/production-jobs`
+}
+
+export const listProductionJobs = async (params?: ListProductionJobsParams, options?: RequestInit): Promise<ProductionJobOut[]> => {
+  
+  return apiMutator<ProductionJobOut[]>(getListProductionJobsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Production Job
+ */
+export const getCreateProductionJobUrl = () => {
+
+
+  
+
+  return `/production-jobs`
+}
+
+export const createProductionJob = async (productionJobCreateRequest: ProductionJobCreateRequest, options?: RequestInit): Promise<ProductionJobOut> => {
+  
+  return apiMutator<ProductionJobOut>(getCreateProductionJobUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      productionJobCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Production Job
+ */
+export const getGetProductionJobUrl = (jobId: string,) => {
+
+
+  
+
+  return `/production-jobs/${jobId}`
+}
+
+export const getProductionJob = async (jobId: string, options?: RequestInit): Promise<ProductionJobDetailOut> => {
+  
+  return apiMutator<ProductionJobDetailOut>(getGetProductionJobUrl(jobId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Allocate Production Job Component
+ */
+export const getAllocateProductionJobComponentUrl = (jobId: string,
+    componentId: string,) => {
+
+
+  
+
+  return `/production-jobs/${jobId}/components/${componentId}/allocate`
+}
+
+export const allocateProductionJobComponent = async (jobId: string,
+    componentId: string,
+    allocateComponentRequest: AllocateComponentRequest, options?: RequestInit): Promise<ProductionJobComponentWithAllocationsOut> => {
+  
+  return apiMutator<ProductionJobComponentWithAllocationsOut>(getAllocateProductionJobComponentUrl(jobId,componentId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      allocateComponentRequest,)
   }
 );}
