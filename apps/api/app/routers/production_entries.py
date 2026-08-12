@@ -17,6 +17,8 @@ from app.models import (
     User,
 )
 from app.schemas.production_entry import (
+    EmployeePerformanceOut,
+    MachinePerformanceOut,
     MachineProductionEntryCreateRequest,
     MachineProductionEntryOut,
     RejectEntryRequest,
@@ -117,6 +119,120 @@ def list_production_entries(
         _to_entry_out(entry, allocation, component, machine, operator, helpers.get(entry.helper_employee_id))
         for entry, allocation, component, machine, operator in rows
     ]
+
+
+def _approved_range_filters(start_date: date | None, end_date: date | None) -> list:
+    filters = [MachineProductionEntry.status == "approved"]
+    if start_date:
+        filters.append(MachineProductionEntry.entry_date >= start_date)
+    if end_date:
+        filters.append(MachineProductionEntry.entry_date <= end_date)
+    return filters
+
+
+@router.get(
+    "/performance/machines", response_model=list[MachinePerformanceOut], operation_id="getMachinePerformance"
+)
+def get_machine_performance(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("production_entries.view")),
+) -> list[MachinePerformanceOut]:
+    filters = _approved_range_filters(start_date, end_date)
+
+    grand_total = db.query(func.coalesce(func.sum(MachineProductionEntry.quantity), 0)).filter(*filters).scalar()
+
+    rows = (
+        db.query(
+            ProductionJobMachineAllocation.machine_id,
+            func.sum(MachineProductionEntry.quantity).label("total_quantity"),
+            func.count(MachineProductionEntry.id).label("entry_count"),
+        )
+        .join(
+            ProductionJobMachineAllocation,
+            MachineProductionEntry.production_job_machine_allocation_id == ProductionJobMachineAllocation.id,
+        )
+        .filter(*filters)
+        .group_by(ProductionJobMachineAllocation.machine_id)
+        .all()
+    )
+
+    machine_ids = [r.machine_id for r in rows]
+    machines = {m.id: m for m in db.query(Machine).filter(Machine.id.in_(machine_ids)).all()} if machine_ids else {}
+
+    results = [
+        MachinePerformanceOut(
+            machine_id=machine_id,
+            machine_code=machines[machine_id].code,
+            total_quantity=total_quantity,
+            entry_count=entry_count,
+            percentage_of_total=round(total_quantity / grand_total * 100, 1) if grand_total else 0.0,
+        )
+        for machine_id, total_quantity, entry_count in rows
+    ]
+    results.sort(key=lambda r: r.total_quantity, reverse=True)
+    return results
+
+
+@router.get(
+    "/performance/employees", response_model=list[EmployeePerformanceOut], operation_id="getEmployeePerformance"
+)
+def get_employee_performance(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("production_entries.view")),
+) -> list[EmployeePerformanceOut]:
+    filters = _approved_range_filters(start_date, end_date)
+
+    grand_total = db.query(func.coalesce(func.sum(MachineProductionEntry.quantity), 0)).filter(*filters).scalar()
+
+    # Both operator and helper get full credit on their own totals for a
+    # shared entry (see [[domain_production_entry]] memory) -- summed from
+    # two separate group-bys rather than a single query, since an entry
+    # contributes to two different employees' totals at once.
+    operator_rows = (
+        db.query(
+            MachineProductionEntry.operator_employee_id.label("employee_id"),
+            func.sum(MachineProductionEntry.quantity).label("total_quantity"),
+            func.count(MachineProductionEntry.id).label("entry_count"),
+        )
+        .filter(*filters)
+        .group_by(MachineProductionEntry.operator_employee_id)
+        .all()
+    )
+    helper_rows = (
+        db.query(
+            MachineProductionEntry.helper_employee_id.label("employee_id"),
+            func.sum(MachineProductionEntry.quantity).label("total_quantity"),
+            func.count(MachineProductionEntry.id).label("entry_count"),
+        )
+        .filter(*filters, MachineProductionEntry.helper_employee_id.isnot(None))
+        .group_by(MachineProductionEntry.helper_employee_id)
+        .all()
+    )
+
+    totals: dict[uuid.UUID, dict[str, int]] = {}
+    for employee_id, total_quantity, entry_count in [*operator_rows, *helper_rows]:
+        bucket = totals.setdefault(employee_id, {"total_quantity": 0, "entry_count": 0})
+        bucket["total_quantity"] += total_quantity
+        bucket["entry_count"] += entry_count
+
+    employees = {e.id: e for e in db.query(Employee).filter(Employee.id.in_(totals.keys())).all()} if totals else {}
+
+    results = [
+        EmployeePerformanceOut(
+            employee_id=employee_id,
+            full_name=employees[employee_id].full_name,
+            total_quantity=bucket["total_quantity"],
+            entry_count=bucket["entry_count"],
+            percentage_of_total=round(bucket["total_quantity"] / grand_total * 100, 1) if grand_total else 0.0,
+        )
+        for employee_id, bucket in totals.items()
+    ]
+    results.sort(key=lambda r: r.total_quantity, reverse=True)
+    return results
 
 
 @router.post(

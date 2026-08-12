@@ -47,3 +47,30 @@ class MachineProductionEntryOut(BaseModel):
     helper_name: str | None
 
     model_config = {"from_attributes": True}
+
+
+class MachinePerformanceOut(BaseModel):
+    """One machine's share of total approved production over the queried
+    date range (see routers/production_entries.py's performance
+    endpoints). percentage_of_total is relative to the grand total of all
+    approved quantity in the same range, not to other machines' totals."""
+
+    machine_id: uuid.UUID
+    machine_code: str
+    total_quantity: int
+    entry_count: int
+    percentage_of_total: float
+
+
+class EmployeePerformanceOut(BaseModel):
+    """One employee's share of total approved production over the queried
+    date range. total_quantity credits an employee for entries where they
+    were either the operator or the helper -- both roles get full credit
+    on their own totals (see [[domain_production_entry]] memory), so
+    percentages across all employees can sum to more than 100%."""
+
+    employee_id: uuid.UUID
+    full_name: str
+    total_quantity: int
+    entry_count: int
+    percentage_of_total: float

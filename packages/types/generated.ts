@@ -196,6 +196,21 @@ export interface EmployeeOut {
   is_active: boolean;
 }
 
+/**
+ * One employee's share of total approved production over the queried
+date range. total_quantity credits an employee for entries where they
+were either the operator or the helper -- both roles get full credit
+on their own totals (see [[domain_production_entry]] memory), so
+percentages across all employees can sum to more than 100%.
+ */
+export interface EmployeePerformanceOut {
+  employee_id: string;
+  full_name: string;
+  total_quantity: number;
+  entry_count: number;
+  percentage_of_total: number;
+}
+
 export type EmployeeUpdateRequestEmployeeCode = string | null;
 
 export type EmployeeUpdateRequestFullName = string | null;
@@ -538,6 +553,20 @@ export interface MachineOut {
   status: string;
   notes: MachineOutNotes;
   is_active: boolean;
+}
+
+/**
+ * One machine's share of total approved production over the queried
+date range (see routers/production_entries.py's performance
+endpoints). percentage_of_total is relative to the grand total of all
+approved quantity in the same range, not to other machines' totals.
+ */
+export interface MachinePerformanceOut {
+  machine_id: string;
+  machine_code: string;
+  total_quantity: number;
+  entry_count: number;
+  percentage_of_total: number;
 }
 
 export type MachineProductionEntryCreateRequestShift = typeof MachineProductionEntryCreateRequestShift[keyof typeof MachineProductionEntryCreateRequestShift];
@@ -1116,6 +1145,16 @@ shift?: string | null;
 machine_id?: string | null;
 operator_employee_id?: string | null;
 production_job_machine_allocation_id?: string | null;
+};
+
+export type GetMachinePerformanceParams = {
+start_date?: string | null;
+end_date?: string | null;
+};
+
+export type GetEmployeePerformanceParams = {
+start_date?: string | null;
+end_date?: string | null;
 };
 
 /**
@@ -2744,6 +2783,68 @@ export const createProductionEntry = async (machineProductionEntryCreateRequest:
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       machineProductionEntryCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Machine Performance
+ */
+export const getGetMachinePerformanceUrl = (params?: GetMachinePerformanceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/production-entries/performance/machines?${stringifiedParams}` : `/production-entries/performance/machines`
+}
+
+export const getMachinePerformance = async (params?: GetMachinePerformanceParams, options?: RequestInit): Promise<MachinePerformanceOut[]> => {
+  
+  return apiMutator<MachinePerformanceOut[]>(getGetMachinePerformanceUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Employee Performance
+ */
+export const getGetEmployeePerformanceUrl = (params?: GetEmployeePerformanceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/production-entries/performance/employees?${stringifiedParams}` : `/production-entries/performance/employees`
+}
+
+export const getEmployeePerformance = async (params?: GetEmployeePerformanceParams, options?: RequestInit): Promise<EmployeePerformanceOut[]> => {
+  
+  return apiMutator<EmployeePerformanceOut[]>(getGetEmployeePerformanceUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
   }
 );}
 
