@@ -28,5 +28,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Branches", href: "/branches", requiredPermission: "branches.view" },
   { label: "Machines", href: "/machines", requiredPermission: "machines.view" },
   { label: "Employees", href: "/employees", requiredPermission: "employees.view" },
-  { label: "Company Setup", href: "/onboarding", requiredPermission: "factories.edit" },
+  { label: "Company Profile", href: "/settings/company", requiredPermission: "factories.edit" },
+  { label: "Roles & Permissions", href: "/settings/roles", requiredPermission: "roles.view" },
 ];
