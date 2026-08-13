@@ -557,6 +557,34 @@ export interface InvoiceOut {
   total_amount: number;
 }
 
+export type LedgerEntryOutEntryType = typeof LedgerEntryOutEntryType[keyof typeof LedgerEntryOutEntryType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const LedgerEntryOutEntryType = {
+  opening_balance: 'opening_balance',
+  invoice: 'invoice',
+  payment: 'payment',
+} as const;
+
+/**
+ * One row of a Party's running ledger -- computed live from Invoice
+(debit) and Payment (credit) rows plus Party.opening_balance, never
+stored (same "computed, not a stored ledger" pattern as
+InvoiceOut.total_amount). Append-only / reversal-only by construction:
+there's no edit endpoint on Invoice or Payment, so a correction can
+only ever be a new offsetting entry, never a row mutation.
+ */
+export interface LedgerEntryOut {
+  entry_date: string;
+  entry_type: LedgerEntryOutEntryType;
+  reference: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
 export type LoginRequestTotpCode = string | null;
 
 export interface LoginRequest {
@@ -2460,6 +2488,54 @@ export const updateParty = async (partyId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       partyUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Party Ledger
+ */
+export const getGetPartyLedgerUrl = (partyId: string,) => {
+
+
+  
+
+  return `/parties/${partyId}/ledger`
+}
+
+export const getPartyLedger = async (partyId: string, options?: RequestInit): Promise<LedgerEntryOut[]> => {
+  
+  return apiMutator<LedgerEntryOut[]>(getGetPartyLedgerUrl(partyId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Party Ledger Pdf
+ */
+export const getGetPartyLedgerPdfUrl = (partyId: string,) => {
+
+
+  
+
+  return `/parties/${partyId}/ledger/pdf`
+}
+
+export const getPartyLedgerPdf = async (partyId: string, options?: RequestInit): Promise<unknown> => {
+  
+  return apiMutator<unknown>(getGetPartyLedgerPdfUrl(partyId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
   }
 );}
 

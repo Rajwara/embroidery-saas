@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import Link from "next/link";
+
 import { listParties } from "@embroidery/types";
 import type { Party } from "@embroidery/types";
 
@@ -66,7 +68,11 @@ export default function PartiesPage() {
           <tbody>
             {parties.map((party) => (
               <tr key={party.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">{party.name}</td>
+                <td className="px-4 py-2">
+                  <Link href={`/parties/${party.id}`} className="font-medium text-gray-900 underline">
+                    {party.name}
+                  </Link>
+                </td>
                 <td className="px-4 py-2">{party.contact_person ?? "—"}</td>
                 <td className="px-4 py-2">{party.phone ?? "—"}</td>
                 {canSeeMoney && <td className="px-4 py-2">{party.opening_balance ?? "—"}</td>}
