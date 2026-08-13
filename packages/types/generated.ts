@@ -450,6 +450,19 @@ export interface HTTPValidationError {
   detail?: ValidationError[];
 }
 
+/**
+ * How much of an invoice has been paid so far (sum of invoice-type
+PaymentAllocations across every payment) and what remains -- computed
+live, not stored (same reasoning as InvoiceOut.total_amount).
+ */
+export interface InvoiceBalanceOut {
+  invoice_id: string;
+  invoice_number: string;
+  total_amount: number;
+  paid_amount: number;
+  balance: number;
+}
+
 export type InvoiceCreateRequestDueDate = string | null;
 
 export type InvoiceCreateRequestNotes = string | null;
@@ -933,6 +946,93 @@ export interface PartyUpdateRequest {
   is_active?: PartyUpdateRequestIsActive;
 }
 
+export type PaymentAllocationCreateRequestAllocationType = typeof PaymentAllocationCreateRequestAllocationType[keyof typeof PaymentAllocationCreateRequestAllocationType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const PaymentAllocationCreateRequestAllocationType = {
+  invoice: 'invoice',
+  general: 'general',
+  advance: 'advance',
+  unallocated: 'unallocated',
+} as const;
+
+export type PaymentAllocationCreateRequestInvoiceId = string | null;
+
+export interface PaymentAllocationCreateRequest {
+  allocation_type: PaymentAllocationCreateRequestAllocationType;
+  invoice_id?: PaymentAllocationCreateRequestInvoiceId;
+  amount: number;
+}
+
+export type PaymentAllocationOutInvoiceId = string | null;
+
+export type PaymentAllocationOutInvoiceNumber = string | null;
+
+export interface PaymentAllocationOut {
+  id: string;
+  payment_id: string;
+  allocation_type: string;
+  invoice_id: PaymentAllocationOutInvoiceId;
+  amount: number;
+  invoice_number?: PaymentAllocationOutInvoiceNumber;
+}
+
+export type PaymentCreateRequestPaymentMethod = typeof PaymentCreateRequestPaymentMethod[keyof typeof PaymentCreateRequestPaymentMethod];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const PaymentCreateRequestPaymentMethod = {
+  cash: 'cash',
+  bank_transfer: 'bank_transfer',
+  cheque: 'cheque',
+  other: 'other',
+} as const;
+
+export type PaymentCreateRequestNotes = string | null;
+
+export interface PaymentCreateRequest {
+  branch_id: string;
+  party_id: string;
+  payment_date: string;
+  amount: number;
+  payment_method: PaymentCreateRequestPaymentMethod;
+  notes?: PaymentCreateRequestNotes;
+  allocations: PaymentAllocationCreateRequest[];
+}
+
+export type PaymentDetailOutNotes = string | null;
+
+/**
+ * Used by GET /payments/{id} and create -- built manually by the
+router (no ORM relationships defined on Payment), not derived
+automatically from response_model attribute access.
+ */
+export interface PaymentDetailOut {
+  id: string;
+  branch_id: string;
+  party_id: string;
+  payment_number: string;
+  payment_date: string;
+  amount: number;
+  payment_method: string;
+  notes: PaymentDetailOutNotes;
+  allocations: PaymentAllocationOut[];
+}
+
+export type PaymentOutNotes = string | null;
+
+export interface PaymentOut {
+  id: string;
+  branch_id: string;
+  party_id: string;
+  payment_number: string;
+  payment_date: string;
+  amount: number;
+  payment_method: string;
+  notes: PaymentOutNotes;
+}
+
 export interface PermissionOut {
   id: string;
   code: string;
@@ -1367,6 +1467,23 @@ party_id?: string | null;
 };
 
 export type ListInvoicesParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+party_id?: string | null;
+};
+
+export type GetInvoiceBalancesParams = {
+party_id: string;
+};
+
+export type ListPaymentsParams = {
 /**
  * @minimum 0
  */
@@ -3403,6 +3520,117 @@ export const getGetInvoicePdfUrl = (invoiceId: string,) => {
 export const getInvoicePdf = async (invoiceId: string, options?: RequestInit): Promise<unknown> => {
   
   return apiMutator<unknown>(getGetInvoicePdfUrl(invoiceId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Invoice Balances
+ */
+export const getGetInvoiceBalancesUrl = (params: GetInvoiceBalancesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/payments/invoice-balances?${stringifiedParams}` : `/payments/invoice-balances`
+}
+
+export const getInvoiceBalances = async (params: GetInvoiceBalancesParams, options?: RequestInit): Promise<InvoiceBalanceOut[]> => {
+  
+  return apiMutator<InvoiceBalanceOut[]>(getGetInvoiceBalancesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Payments
+ */
+export const getListPaymentsUrl = (params?: ListPaymentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/payments?${stringifiedParams}` : `/payments`
+}
+
+export const listPayments = async (params?: ListPaymentsParams, options?: RequestInit): Promise<PaymentOut[]> => {
+  
+  return apiMutator<PaymentOut[]>(getListPaymentsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Payment
+ */
+export const getCreatePaymentUrl = () => {
+
+
+  
+
+  return `/payments`
+}
+
+export const createPayment = async (paymentCreateRequest: PaymentCreateRequest, options?: RequestInit): Promise<PaymentDetailOut> => {
+  
+  return apiMutator<PaymentDetailOut>(getCreatePaymentUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      paymentCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Payment
+ */
+export const getGetPaymentUrl = (paymentId: string,) => {
+
+
+  
+
+  return `/payments/${paymentId}`
+}
+
+export const getPayment = async (paymentId: string, options?: RequestInit): Promise<PaymentDetailOut> => {
+  
+  return apiMutator<PaymentDetailOut>(getGetPaymentUrl(paymentId),
   {      
     ...options,
     method: 'GET'

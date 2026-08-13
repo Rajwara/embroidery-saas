@@ -17,6 +17,8 @@ from app.models.machine import Machine
 from app.models.machine_production_entry import MachineProductionEntry
 from app.models.party import Party
 from app.models.password_reset_token import PasswordResetToken
+from app.models.payment import Payment
+from app.models.payment_allocation import PaymentAllocation
 from app.models.permission_override import UserPermissionOverride
 from app.models.production_job import ProductionJob
 from app.models.production_job_component import ProductionJobComponent
@@ -53,4 +55,6 @@ __all__ = [
     "DeliveryChallanLine",
     "Invoice",
     "InvoiceLineItem",
+    "Payment",
+    "PaymentAllocation",
 ]

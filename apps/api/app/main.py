@@ -13,6 +13,7 @@ from app.routers import (
     lots,
     machines,
     parties,
+    payments,
     production_entries,
     production_jobs,
     roles,
@@ -51,3 +52,4 @@ app.include_router(production_jobs.router, prefix="/production-jobs", tags=["pro
 app.include_router(production_entries.router, prefix="/production-entries", tags=["production-entries"])
 app.include_router(delivery_challans.router, prefix="/delivery-challans", tags=["delivery-challans"])
 app.include_router(invoices.router, prefix="/invoices", tags=["invoices"])
+app.include_router(payments.router, prefix="/payments", tags=["payments"])

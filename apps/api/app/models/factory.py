@@ -39,3 +39,6 @@ class Factory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # Same pattern, for Invoice.invoice_number (e.g. "INV-000001") -- see
     # routers/invoices.py.
     next_invoice_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Same pattern, for Payment.payment_number (e.g. "PMT-000001") -- see
+    # routers/payments.py.
+    next_payment_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

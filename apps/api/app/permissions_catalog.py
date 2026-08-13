@@ -71,6 +71,9 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("invoices.view", "View invoices"),
     ("invoices.create", "Create invoices"),
     ("invoices.export", "Export invoice data"),
+    ("payments.view", "View payments"),
+    ("payments.create", "Create payments"),
+    ("payments.export", "Export payment data"),
 ]
 
 ROLE_TEMPLATES: list[dict] = [
@@ -91,6 +94,7 @@ ROLE_TEMPLATES: list[dict] = [
             "production_entries.export",
             "delivery_challans.view", "delivery_challans.create", "delivery_challans.export",
             "invoices.view", "invoices.create", "invoices.export",
+            "payments.view", "payments.create", "payments.export",
         ],
     },
     {
@@ -110,6 +114,7 @@ ROLE_TEMPLATES: list[dict] = [
             "production_entries.view", "production_entries.export",
             "delivery_challans.view", "delivery_challans.export",
             "invoices.view", "invoices.create", "invoices.export",
+            "payments.view", "payments.create", "payments.export",
         ],
     },
     {
