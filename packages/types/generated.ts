@@ -65,6 +65,13 @@ export interface AdvancePurchaseRequiredRequest {
   received_quantity?: AdvancePurchaseRequiredRequestReceivedQuantity;
 }
 
+export interface AgeingBuckets {
+  current: number;
+  days_31_60: number;
+  days_61_90: number;
+  days_over_90: number;
+}
+
 export interface AllocateComponentRequest {
   allocations: MachineAllocationInput[];
 }
@@ -584,6 +591,18 @@ export interface FactoryUpdateRequest {
   is_active?: FactoryUpdateRequestIsActive;
 }
 
+export type FinancialSummaryReportOutBranchId = string | null;
+
+export interface FinancialSummaryReportOut {
+  date_from: string;
+  date_to: string;
+  branch_id: FinancialSummaryReportOutBranchId;
+  revenue: number;
+  expenses: number;
+  purchases: number;
+  net: number;
+}
+
 export interface ForgotPasswordRequest {
   email: string;
 }
@@ -644,6 +663,26 @@ export interface InventoryItemUpdateRequest {
   minimum_threshold?: InventoryItemUpdateRequestMinimumThreshold;
   notes?: InventoryItemUpdateRequestNotes;
   is_active?: InventoryItemUpdateRequestIsActive;
+}
+
+export type InventoryMovementReportOutBranchId = string | null;
+
+export interface InventoryMovementReportOut {
+  date_from: string;
+  date_to: string;
+  branch_id: InventoryMovementReportOutBranchId;
+  items: InventoryMovementRowOut[];
+}
+
+export interface InventoryMovementRowOut {
+  inventory_item_id: string;
+  item_name: string;
+  unit: string;
+  opening_stock: number;
+  receipts: number;
+  issues: number;
+  adjustments: number;
+  closing_stock: number;
 }
 
 /**
@@ -1337,6 +1376,17 @@ export interface PermissionOverrideRequest {
   effect?: PermissionOverrideRequestEffect;
 }
 
+export interface ProductionByComponentRowOut {
+  component_type: string;
+  quantity: number;
+}
+
+export interface ProductionByLotRowOut {
+  lot_id: string;
+  lot_number: string;
+  quantity: number;
+}
+
 export interface ProductionJobComponentWithAllocationsOut {
   id: string;
   production_job_id: string;
@@ -1388,6 +1438,17 @@ export interface ProductionJobOut {
   colour_name: string;
   design_master_number: string;
   design_name: string;
+}
+
+export type ProductionSummaryReportOutBranchId = string | null;
+
+export interface ProductionSummaryReportOut {
+  date_from: string;
+  date_to: string;
+  branch_id: ProductionSummaryReportOutBranchId;
+  total_quantity: number;
+  by_component: ProductionByComponentRowOut[];
+  by_lot: ProductionByLotRowOut[];
 }
 
 export type PurchaseCreateRequestNotes = string | null;
@@ -1462,6 +1523,20 @@ export interface PurchaseRequiredOut {
   item_name: string;
   item_unit: string;
   current_stock: number;
+}
+
+export interface ReceivableAgeingReportOut {
+  as_of: string;
+  total_outstanding: number;
+  buckets: AgeingBuckets;
+  parties: ReceivableAgeingRowOut[];
+}
+
+export interface ReceivableAgeingRowOut {
+  party_id: string;
+  party_name: string;
+  total_outstanding: number;
+  buckets: AgeingBuckets;
 }
 
 /**
@@ -2013,6 +2088,28 @@ open_only?: boolean;
 };
 
 export type GetMachineCostReportParams = {
+date_from: string;
+date_to: string;
+branch_id?: string | null;
+};
+
+export type GetReceivableAgeingReportParams = {
+as_of?: string | null;
+};
+
+export type GetFinancialSummaryReportParams = {
+date_from: string;
+date_to: string;
+branch_id?: string | null;
+};
+
+export type GetProductionSummaryReportParams = {
+date_from: string;
+date_to: string;
+branch_id?: string | null;
+};
+
+export type GetInventoryMovementReportParams = {
 date_from: string;
 date_to: string;
 branch_id?: string | null;
@@ -5001,6 +5098,130 @@ export const getGetMachineCostReportUrl = (params: GetMachineCostReportParams,) 
 export const getMachineCostReport = async (params: GetMachineCostReportParams, options?: RequestInit): Promise<MachineCostReportOut> => {
   
   return apiMutator<MachineCostReportOut>(getGetMachineCostReportUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Receivable Ageing Report
+ */
+export const getGetReceivableAgeingReportUrl = (params?: GetReceivableAgeingReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/reports/receivables/ageing?${stringifiedParams}` : `/reports/receivables/ageing`
+}
+
+export const getReceivableAgeingReport = async (params?: GetReceivableAgeingReportParams, options?: RequestInit): Promise<ReceivableAgeingReportOut> => {
+  
+  return apiMutator<ReceivableAgeingReportOut>(getGetReceivableAgeingReportUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Financial Summary Report
+ */
+export const getGetFinancialSummaryReportUrl = (params: GetFinancialSummaryReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/reports/financial/summary?${stringifiedParams}` : `/reports/financial/summary`
+}
+
+export const getFinancialSummaryReport = async (params: GetFinancialSummaryReportParams, options?: RequestInit): Promise<FinancialSummaryReportOut> => {
+  
+  return apiMutator<FinancialSummaryReportOut>(getGetFinancialSummaryReportUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Production Summary Report
+ */
+export const getGetProductionSummaryReportUrl = (params: GetProductionSummaryReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/reports/production/summary?${stringifiedParams}` : `/reports/production/summary`
+}
+
+export const getProductionSummaryReport = async (params: GetProductionSummaryReportParams, options?: RequestInit): Promise<ProductionSummaryReportOut> => {
+  
+  return apiMutator<ProductionSummaryReportOut>(getGetProductionSummaryReportUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Inventory Movement Report
+ */
+export const getGetInventoryMovementReportUrl = (params: GetInventoryMovementReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/reports/inventory/movement?${stringifiedParams}` : `/reports/inventory/movement`
+}
+
+export const getInventoryMovementReport = async (params: GetInventoryMovementReportParams, options?: RequestInit): Promise<InventoryMovementReportOut> => {
+  
+  return apiMutator<InventoryMovementReportOut>(getGetInventoryMovementReportUrl(params),
   {      
     ...options,
     method: 'GET'

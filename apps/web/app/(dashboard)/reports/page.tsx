@@ -2,6 +2,26 @@ import Link from "next/link";
 
 const REPORTS = [
   {
+    href: "/reports/receivables",
+    title: "Receivable Ageing",
+    description: "Outstanding invoice balances by party, aged since each invoice's date.",
+  },
+  {
+    href: "/reports/financial",
+    title: "Financial Summary",
+    description: "Invoiced revenue vs. expenses and purchases for the period.",
+  },
+  {
+    href: "/reports/production",
+    title: "Production Summary",
+    description: "Approved production quantity for the period, by component and by lot.",
+  },
+  {
+    href: "/reports/inventory",
+    title: "Inventory Movement",
+    description: "Opening stock, receipts, issues, and adjustments for the period.",
+  },
+  {
     href: "/reports/machines",
     title: "Machine Cost Report",
     description: "Overhead cost split equally across active machines, with cost per unit produced.",
