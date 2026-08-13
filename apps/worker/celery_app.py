@@ -8,9 +8,12 @@ redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 celery_app = Celery("embroidery_saas_worker", broker=redis_url, backend=redis_url)
 
 celery_app.conf.beat_schedule = {
-    # Phase 5: wire this up to the real weekly-report task once it exists.
-    # "send-weekly-reports": {
-    #     "task": "worker.tasks.send_weekly_reports",
-    #     "schedule": crontab(day_of_week="monday", hour=8, minute=0),
-    # },
+    # Runs every day, not just Monday/the 1st -- tasks.send_scheduled_reports
+    # itself asks the API which settings are actually due today (a setting's
+    # own frequency determines that), so a single daily tick covers both
+    # weekly and monthly schedules without two separate crontab entries.
+    "send-scheduled-reports": {
+        "task": "tasks.send_scheduled_reports",
+        "schedule": crontab(hour=8, minute=0),
+    },
 }

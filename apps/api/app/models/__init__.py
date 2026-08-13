@@ -35,6 +35,7 @@ from app.models.production_job_machine_allocation import ProductionJobMachineAll
 from app.models.purchase import Purchase
 from app.models.purchase_line_item import PurchaseLineItem
 from app.models.purchase_required import PurchaseRequired
+from app.models.scheduled_report_setting import ScheduledReportSetting
 from app.models.stock_transaction import StockTransaction
 from app.models.supplier import Supplier
 from app.models.tenant import Permission, Role, Tenant, User
@@ -83,4 +84,5 @@ __all__ = [
     "Deduction",
     "PayrollRun",
     "PayrollEntry",
+    "ScheduledReportSetting",
 ]

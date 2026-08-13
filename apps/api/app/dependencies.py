@@ -1,16 +1,18 @@
 import uuid
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import get_db, set_tenant_context
 from app.models import User
 from app.permissions import user_has_permission
 from app.security import decode_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
+settings = get_settings()
 
 
 def get_current_user(
@@ -63,3 +65,13 @@ def require_permission(code: str):
         return user
 
     return dependency
+
+
+def require_internal_secret(x_internal_secret: str = Header(...)) -> None:
+    """Gates apps/worker's machine-to-machine calls (scheduled report
+    delivery has no human session to authenticate as a User). Compares
+    against internal_api_secret, never a user JWT -- callers using this
+    must set RLS tenant context themselves per-row/per-tenant, since there
+    is no single authenticated tenant to derive it from."""
+    if x_internal_secret != settings.internal_api_secret:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="invalid_internal_secret")

@@ -204,19 +204,12 @@ def get_receivable_ageing_report(
     )
 
 
-@router.get(
-    "/reports/financial/summary", response_model=FinancialSummaryReportOut, operation_id="getFinancialSummaryReport"
-)
-def get_financial_summary_report(
-    date_from: date = Query(...),
-    date_to: date = Query(...),
-    branch_id: uuid.UUID | None = Query(None),
-    db: Session = Depends(get_db),
-    _user: User = Depends(require_permission("reports.view")),
+def compute_financial_summary(
+    db: Session, date_from: date, date_to: date, branch_id: uuid.UUID | None
 ) -> FinancialSummaryReportOut:
-    if date_from > date_to:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="date_from_after_date_to")
-
+    """Shared by GET /reports/financial/summary and the scheduled-report PDF
+    endpoint in routers/scheduled_reports.py -- kept here as a plain function
+    (no permission dependency) so both call sites do their own authZ."""
     revenue_query = (
         db.query(func.coalesce(func.sum(InvoiceLineItem.line_total), 0))
         .join(Invoice, InvoiceLineItem.invoice_id == Invoice.id)
@@ -251,6 +244,21 @@ def get_financial_summary_report(
         purchases=round(purchases, 2),
         net=round(revenue - expenses - purchases, 2),
     )
+
+
+@router.get(
+    "/reports/financial/summary", response_model=FinancialSummaryReportOut, operation_id="getFinancialSummaryReport"
+)
+def get_financial_summary_report(
+    date_from: date = Query(...),
+    date_to: date = Query(...),
+    branch_id: uuid.UUID | None = Query(None),
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("reports.view")),
+) -> FinancialSummaryReportOut:
+    if date_from > date_to:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="date_from_after_date_to")
+    return compute_financial_summary(db, date_from, date_to, branch_id)
 
 
 @router.get(

@@ -26,6 +26,11 @@ const REPORTS = [
     title: "Machine Cost Report",
     description: "Overhead cost split equally across active machines, with cost per unit produced.",
   },
+  {
+    href: "/reports/scheduled",
+    title: "Scheduled Reports",
+    description: "Have a report emailed automatically on a weekly or monthly cadence.",
+  },
 ];
 
 export default function ReportsPage() {

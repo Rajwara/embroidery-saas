@@ -313,6 +313,20 @@ export interface DesignVariantUpdateRequest {
   stitch_count?: DesignVariantUpdateRequestStitchCount;
 }
 
+/**
+ * Internal-only -- what the worker needs to fetch the PDF and send the
+email for one due setting. tenant_id lets the worker's log/error
+messages identify which tenant a failure belongs to; it plays no role
+in authorization (the internal endpoints authenticate by shared secret
+and set RLS tenant context themselves from this same id server-side).
+ */
+export interface DueScheduledReportOut {
+  id: string;
+  tenant_id: string;
+  report_type: string;
+  recipient_email: string;
+}
+
 export interface EffectivePermissionsResponse {
   user_id: string;
   is_super_admin: boolean;
@@ -1596,6 +1610,41 @@ export interface RoleUpdateRequest {
   permission_codes?: RoleUpdateRequestPermissionCodes;
 }
 
+export type ScheduledReportSettingCreateRequestBranchId = string | null;
+
+export interface ScheduledReportSettingCreateRequest {
+  branch_id?: ScheduledReportSettingCreateRequestBranchId;
+  report_type: string;
+  frequency: string;
+  recipient_email: string;
+}
+
+export type ScheduledReportSettingOutBranchId = string | null;
+
+export type ScheduledReportSettingOutLastSentAt = string | null;
+
+export interface ScheduledReportSettingOut {
+  id: string;
+  branch_id: ScheduledReportSettingOutBranchId;
+  report_type: string;
+  frequency: string;
+  recipient_email: string;
+  is_active: boolean;
+  last_sent_at: ScheduledReportSettingOutLastSentAt;
+}
+
+export type ScheduledReportSettingUpdateRequestFrequency = string | null;
+
+export type ScheduledReportSettingUpdateRequestRecipientEmail = string | null;
+
+export type ScheduledReportSettingUpdateRequestIsActive = boolean | null;
+
+export interface ScheduledReportSettingUpdateRequest {
+  frequency?: ScheduledReportSettingUpdateRequestFrequency;
+  recipient_email?: ScheduledReportSettingUpdateRequestRecipientEmail;
+  is_active?: ScheduledReportSettingUpdateRequestIsActive;
+}
+
 export type StockTransactionCreateRequestTransactionType = typeof StockTransactionCreateRequestTransactionType[keyof typeof StockTransactionCreateRequestTransactionType];
 
 
@@ -2114,6 +2163,16 @@ date_from: string;
 date_to: string;
 branch_id?: string | null;
 };
+
+export type InternalGetScheduledReportPdfParams = {
+tenant_id: string;
+};
+
+export type InternalMarkScheduledReportSentParams = {
+tenant_id: string;
+};
+
+export type InternalMarkScheduledReportSent200 = { [key: string]: unknown };
 
 /**
  * @summary Health
@@ -5225,6 +5284,195 @@ export const getInventoryMovementReport = async (params: GetInventoryMovementRep
   {      
     ...options,
     method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Scheduled Reports
+ */
+export const getListScheduledReportsUrl = () => {
+
+
+  
+
+  return `/scheduled-reports`
+}
+
+export const listScheduledReports = async ( options?: RequestInit): Promise<ScheduledReportSettingOut[]> => {
+  
+  return apiMutator<ScheduledReportSettingOut[]>(getListScheduledReportsUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Scheduled Report
+ */
+export const getCreateScheduledReportUrl = () => {
+
+
+  
+
+  return `/scheduled-reports`
+}
+
+export const createScheduledReport = async (scheduledReportSettingCreateRequest: ScheduledReportSettingCreateRequest, options?: RequestInit): Promise<ScheduledReportSettingOut> => {
+  
+  return apiMutator<ScheduledReportSettingOut>(getCreateScheduledReportUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      scheduledReportSettingCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Update Scheduled Report
+ */
+export const getUpdateScheduledReportUrl = (settingId: string,) => {
+
+
+  
+
+  return `/scheduled-reports/${settingId}`
+}
+
+export const updateScheduledReport = async (settingId: string,
+    scheduledReportSettingUpdateRequest: ScheduledReportSettingUpdateRequest, options?: RequestInit): Promise<ScheduledReportSettingOut> => {
+  
+  return apiMutator<ScheduledReportSettingOut>(getUpdateScheduledReportUrl(settingId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      scheduledReportSettingUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Delete Scheduled Report
+ */
+export const getDeleteScheduledReportUrl = (settingId: string,) => {
+
+
+  
+
+  return `/scheduled-reports/${settingId}`
+}
+
+export const deleteScheduledReport = async (settingId: string, options?: RequestInit): Promise<void> => {
+  
+  return apiMutator<void>(getDeleteScheduledReportUrl(settingId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Internal List Due Scheduled Reports
+ */
+export const getInternalListDueScheduledReportsUrl = () => {
+
+
+  
+
+  return `/internal/scheduled-reports/due`
+}
+
+export const internalListDueScheduledReports = async ( options?: RequestInit): Promise<DueScheduledReportOut[]> => {
+  
+  return apiMutator<DueScheduledReportOut[]>(getInternalListDueScheduledReportsUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Internal Get Scheduled Report Pdf
+ */
+export const getInternalGetScheduledReportPdfUrl = (settingId: string,
+    params: InternalGetScheduledReportPdfParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/scheduled-reports/${settingId}/pdf?${stringifiedParams}` : `/internal/scheduled-reports/${settingId}/pdf`
+}
+
+export const internalGetScheduledReportPdf = async (settingId: string,
+    params: InternalGetScheduledReportPdfParams, options?: RequestInit): Promise<unknown> => {
+  
+  return apiMutator<unknown>(getInternalGetScheduledReportPdfUrl(settingId,params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Internal Mark Scheduled Report Sent
+ */
+export const getInternalMarkScheduledReportSentUrl = (settingId: string,
+    params: InternalMarkScheduledReportSentParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/scheduled-reports/${settingId}/mark-sent?${stringifiedParams}` : `/internal/scheduled-reports/${settingId}/mark-sent`
+}
+
+export const internalMarkScheduledReportSent = async (settingId: string,
+    params: InternalMarkScheduledReportSentParams, options?: RequestInit): Promise<InternalMarkScheduledReportSent200> => {
+  
+  return apiMutator<InternalMarkScheduledReportSent200>(getInternalMarkScheduledReportSentUrl(settingId,params),
+  {      
+    ...options,
+    method: 'POST'
     
     
   }

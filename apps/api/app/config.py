@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     environment: str = "local"
     cors_origins: str = "http://localhost:3000"
 
+    # Shared secret for apps/worker's internal-only /internal/* endpoints
+    # (scheduled report delivery). Not a user JWT -- the Celery beat job has
+    # no human session, so it authenticates with this header instead. Must
+    # be overridden in every real environment, same as jwt_secret.
+    internal_api_secret: str = "change-me-in-every-environment"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
