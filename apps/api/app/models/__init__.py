@@ -1,6 +1,8 @@
 from app.models.audit_log import AuditLog
 from app.models.base import Base
 from app.models.branch import Branch
+from app.models.delivery_challan import DeliveryChallan
+from app.models.delivery_challan_line import DeliveryChallanLine
 from app.models.design import Design
 from app.models.design_variant import DesignVariant
 from app.models.employee import Employee
@@ -45,4 +47,6 @@ __all__ = [
     "ProductionJobComponent",
     "ProductionJobMachineAllocation",
     "MachineProductionEntry",
+    "DeliveryChallan",
+    "DeliveryChallanLine",
 ]

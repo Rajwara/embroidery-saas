@@ -5,6 +5,7 @@ from app.config import get_settings
 from app.routers import (
     auth,
     branches,
+    delivery_challans,
     designs,
     employees,
     factory,
@@ -47,3 +48,4 @@ app.include_router(lots.router, prefix="/lots", tags=["lots"])
 app.include_router(designs.router, prefix="/designs", tags=["designs"])
 app.include_router(production_jobs.router, prefix="/production-jobs", tags=["production-jobs"])
 app.include_router(production_entries.router, prefix="/production-entries", tags=["production-entries"])
+app.include_router(delivery_challans.router, prefix="/delivery-challans", tags=["delivery-challans"])

@@ -33,3 +33,6 @@ class Factory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # incremented under a row lock inside the same transaction as the Lot
     # insert (see routers/lots.py) so concurrent creates serialize correctly.
     next_lot_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Same pattern as next_lot_number, for DeliveryChallan.challan_number
+    # (e.g. "CH-000001") -- see routers/delivery_challans.py.
+    next_challan_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

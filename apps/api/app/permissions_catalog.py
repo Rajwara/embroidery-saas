@@ -65,6 +65,9 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("production_entries.create", "Create machine production entries"),
     ("production_entries.approve", "Approve or reject machine production entries"),
     ("production_entries.export", "Export machine production entry data"),
+    ("delivery_challans.view", "View delivery challans"),
+    ("delivery_challans.create", "Create delivery challans"),
+    ("delivery_challans.export", "Export delivery challan data"),
 ]
 
 ROLE_TEMPLATES: list[dict] = [
@@ -83,6 +86,7 @@ ROLE_TEMPLATES: list[dict] = [
             "production_jobs.view", "production_jobs.create", "production_jobs.edit", "production_jobs.export",
             "production_entries.view", "production_entries.create", "production_entries.approve",
             "production_entries.export",
+            "delivery_challans.view", "delivery_challans.create", "delivery_challans.export",
         ],
     },
     {
@@ -100,6 +104,7 @@ ROLE_TEMPLATES: list[dict] = [
             "designs.view", "designs.export",
             "production_jobs.view", "production_jobs.export",
             "production_entries.view", "production_entries.export",
+            "delivery_challans.view", "delivery_challans.export",
         ],
     },
     {

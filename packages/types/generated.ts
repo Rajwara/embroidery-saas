@@ -71,6 +71,71 @@ export interface BranchUpdateRequest {
   is_active?: BranchUpdateRequestIsActive;
 }
 
+export type DeliveryChallanCreateRequestNotes = string | null;
+
+export interface DeliveryChallanCreateRequest {
+  branch_id: string;
+  party_id: string;
+  delivery_date: string;
+  notes?: DeliveryChallanCreateRequestNotes;
+  lines: DeliveryChallanLineCreateRequest[];
+}
+
+export type DeliveryChallanDetailOutNotes = string | null;
+
+/**
+ * Used by GET /delivery-challans/{id} and create -- built manually by
+the router (no ORM relationships defined on DeliveryChallan), not
+derived automatically from response_model attribute access.
+ */
+export interface DeliveryChallanDetailOut {
+  id: string;
+  branch_id: string;
+  party_id: string;
+  challan_number: string;
+  delivery_date: string;
+  notes: DeliveryChallanDetailOutNotes;
+  lines: DeliveryChallanLineOut[];
+}
+
+export type DeliveryChallanLineCreateRequestUnitType = typeof DeliveryChallanLineCreateRequestUnitType[keyof typeof DeliveryChallanLineCreateRequestUnitType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const DeliveryChallanLineCreateRequestUnitType = {
+  shirt: 'shirt',
+  dupatta: 'dupatta',
+  trouser: 'trouser',
+} as const;
+
+export interface DeliveryChallanLineCreateRequest {
+  lot_colour_id: string;
+  unit_type: DeliveryChallanLineCreateRequestUnitType;
+  quantity: number;
+}
+
+export interface DeliveryChallanLineOut {
+  id: string;
+  delivery_challan_id: string;
+  lot_colour_id: string;
+  unit_type: string;
+  quantity: number;
+  lot_id: string;
+  lot_number: string;
+  colour_name: string;
+}
+
+export type DeliveryChallanOutNotes = string | null;
+
+export interface DeliveryChallanOut {
+  id: string;
+  branch_id: string;
+  party_id: string;
+  challan_number: string;
+  delivery_date: string;
+  notes: DeliveryChallanOutNotes;
+}
+
 export type DesignCreateRequestNotes = string | null;
 
 export interface DesignCreateRequest {
@@ -828,6 +893,27 @@ export interface ProductionJobOut {
   design_name: string;
 }
 
+/**
+ * One deliverable unit's received/produced/delivered/remaining state
+for one LotColour (see routers/delivery_challans.py's
+_reconciliation_for_colour). "shirt" is the front+back+sleeves roll-up
+(see [[domain_production_job]] memory); dupatta/trouser are standalone.
+remaining is capped by BOTH what was received from the client AND what
+approved production has actually finished -- see
+[[domain_delivery_challan]] memory for why.
+ */
+export interface ReconciliationRow {
+  lot_colour_id: string;
+  lot_id: string;
+  lot_number: string;
+  colour_name: string;
+  unit_type: string;
+  received: number;
+  approved_produced: number;
+  delivered: number;
+  remaining: number;
+}
+
 export interface RefreshRequest {
   refresh_token: string;
 }
@@ -1155,6 +1241,23 @@ end_date?: string | null;
 export type GetEmployeePerformanceParams = {
 start_date?: string | null;
 end_date?: string | null;
+};
+
+export type GetDeliveryReconciliationParams = {
+party_id: string;
+};
+
+export type ListDeliveryChallansParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+party_id?: string | null;
 };
 
 /**
@@ -2919,5 +3022,116 @@ export const rejectProductionEntry = async (entryId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       rejectEntryRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Delivery Reconciliation
+ */
+export const getGetDeliveryReconciliationUrl = (params: GetDeliveryReconciliationParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/delivery-challans/reconciliation?${stringifiedParams}` : `/delivery-challans/reconciliation`
+}
+
+export const getDeliveryReconciliation = async (params: GetDeliveryReconciliationParams, options?: RequestInit): Promise<ReconciliationRow[]> => {
+  
+  return apiMutator<ReconciliationRow[]>(getGetDeliveryReconciliationUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Delivery Challans
+ */
+export const getListDeliveryChallansUrl = (params?: ListDeliveryChallansParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/delivery-challans?${stringifiedParams}` : `/delivery-challans`
+}
+
+export const listDeliveryChallans = async (params?: ListDeliveryChallansParams, options?: RequestInit): Promise<DeliveryChallanOut[]> => {
+  
+  return apiMutator<DeliveryChallanOut[]>(getListDeliveryChallansUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Delivery Challan
+ */
+export const getCreateDeliveryChallanUrl = () => {
+
+
+  
+
+  return `/delivery-challans`
+}
+
+export const createDeliveryChallan = async (deliveryChallanCreateRequest: DeliveryChallanCreateRequest, options?: RequestInit): Promise<DeliveryChallanDetailOut> => {
+  
+  return apiMutator<DeliveryChallanDetailOut>(getCreateDeliveryChallanUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deliveryChallanCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Delivery Challan
+ */
+export const getGetDeliveryChallanUrl = (challanId: string,) => {
+
+
+  
+
+  return `/delivery-challans/${challanId}`
+}
+
+export const getDeliveryChallan = async (challanId: string, options?: RequestInit): Promise<DeliveryChallanDetailOut> => {
+  
+  return apiMutator<DeliveryChallanDetailOut>(getGetDeliveryChallanUrl(challanId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
   }
 );}
