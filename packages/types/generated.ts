@@ -318,6 +318,30 @@ export interface EmployeeUpdateRequest {
   is_active?: EmployeeUpdateRequestIsActive;
 }
 
+export type ExpenseCreateRequestNotes = string | null;
+
+export interface ExpenseCreateRequest {
+  branch_id: string;
+  category: string;
+  expense_date: string;
+  amount: number;
+  description: string;
+  notes?: ExpenseCreateRequestNotes;
+}
+
+export type ExpenseOutNotes = string | null;
+
+export interface ExpenseOut {
+  id: string;
+  branch_id: string;
+  expense_number: string;
+  category: string;
+  expense_date: string;
+  amount: number;
+  description: string;
+  notes: ExpenseOutNotes;
+}
+
 export type FactoryCreateRequestLegalName = string | null;
 
 export type FactoryCreateRequestAddressLine1 = string | null;
@@ -1619,6 +1643,20 @@ skip?: number;
  */
 limit?: number;
 supplier_id?: string | null;
+};
+
+export type ListExpensesParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+branch_id?: string | null;
+category?: string | null;
 };
 
 /**
@@ -3937,5 +3975,61 @@ export const getPurchase = async (purchaseId: string, options?: RequestInit): Pr
     method: 'GET'
     
     
+  }
+);}
+
+
+
+/**
+ * @summary List Expenses
+ */
+export const getListExpensesUrl = (params?: ListExpensesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/expenses?${stringifiedParams}` : `/expenses`
+}
+
+export const listExpenses = async (params?: ListExpensesParams, options?: RequestInit): Promise<ExpenseOut[]> => {
+  
+  return apiMutator<ExpenseOut[]>(getListExpensesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Expense
+ */
+export const getCreateExpenseUrl = () => {
+
+
+  
+
+  return `/expenses`
+}
+
+export const createExpense = async (expenseCreateRequest: ExpenseCreateRequest, options?: RequestInit): Promise<ExpenseOut> => {
+  
+  return apiMutator<ExpenseOut>(getCreateExpenseUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      expenseCreateRequest,)
   }
 );}

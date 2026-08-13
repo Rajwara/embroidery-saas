@@ -45,3 +45,6 @@ class Factory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # Same pattern, for Purchase.purchase_number (e.g. "PUR-000001") -- see
     # routers/purchases.py.
     next_purchase_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Same pattern, for Expense.expense_number (e.g. "EXP-000001") -- see
+    # routers/expenses.py.
+    next_expense_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

@@ -6,6 +6,7 @@ from app.models.delivery_challan_line import DeliveryChallanLine
 from app.models.design import Design
 from app.models.design_variant import DesignVariant
 from app.models.employee import Employee
+from app.models.expense import Expense
 from app.models.factory import Factory
 from app.models.invoice import Invoice
 from app.models.invoice_line_item import InvoiceLineItem
@@ -61,4 +62,5 @@ __all__ = [
     "PaymentAllocation",
     "Purchase",
     "PurchaseLineItem",
+    "Expense",
 ]

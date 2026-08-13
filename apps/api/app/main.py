@@ -8,6 +8,7 @@ from app.routers import (
     delivery_challans,
     designs,
     employees,
+    expenses,
     factory,
     invoices,
     lots,
@@ -55,3 +56,4 @@ app.include_router(delivery_challans.router, prefix="/delivery-challans", tags=[
 app.include_router(invoices.router, prefix="/invoices", tags=["invoices"])
 app.include_router(payments.router, prefix="/payments", tags=["payments"])
 app.include_router(purchases.router, prefix="/purchases", tags=["purchases"])
+app.include_router(expenses.router, prefix="/expenses", tags=["expenses"])
