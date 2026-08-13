@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import Link from "next/link";
+
 import { listSuppliers } from "@embroidery/types";
 import type { Supplier } from "@embroidery/types";
 
@@ -66,7 +68,11 @@ export default function SuppliersPage() {
           <tbody>
             {suppliers.map((supplier) => (
               <tr key={supplier.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">{supplier.name}</td>
+                <td className="px-4 py-2">
+                  <Link href={`/suppliers/${supplier.id}`} className="font-medium text-gray-900 underline">
+                    {supplier.name}
+                  </Link>
+                </td>
                 <td className="px-4 py-2">{supplier.contact_person ?? "—"}</td>
                 <td className="px-4 py-2">{supplier.phone ?? "—"}</td>
                 {canSeeMoney && <td className="px-4 py-2">{supplier.opening_balance ?? "—"}</td>}

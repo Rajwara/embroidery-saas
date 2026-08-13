@@ -1127,6 +1127,61 @@ export interface ProductionJobOut {
   design_name: string;
 }
 
+export type PurchaseCreateRequestNotes = string | null;
+
+export interface PurchaseCreateRequest {
+  branch_id: string;
+  supplier_id: string;
+  purchase_date: string;
+  notes?: PurchaseCreateRequestNotes;
+  lines: PurchaseLineItemCreateRequest[];
+}
+
+export type PurchaseDetailOutNotes = string | null;
+
+/**
+ * Used by GET /purchases/{id} and create -- built manually by the
+router (no ORM relationships defined on Purchase), not derived
+automatically from response_model attribute access.
+ */
+export interface PurchaseDetailOut {
+  id: string;
+  branch_id: string;
+  supplier_id: string;
+  purchase_number: string;
+  purchase_date: string;
+  notes: PurchaseDetailOutNotes;
+  total_amount: number;
+  lines: PurchaseLineItemOut[];
+}
+
+export interface PurchaseLineItemCreateRequest {
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface PurchaseLineItemOut {
+  id: string;
+  purchase_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+}
+
+export type PurchaseOutNotes = string | null;
+
+export interface PurchaseOut {
+  id: string;
+  branch_id: string;
+  supplier_id: string;
+  purchase_number: string;
+  purchase_date: string;
+  notes: PurchaseOutNotes;
+  total_amount: number;
+}
+
 /**
  * One deliverable unit's received/produced/delivered/remaining state
 for one LotColour (see routers/delivery_challans.py's
@@ -1245,6 +1300,35 @@ export interface SupplierDocsOut {
   notes: SupplierDocsOutNotes;
   is_active: boolean;
   opening_balance?: SupplierDocsOutOpeningBalance;
+}
+
+export type SupplierLedgerEntryOutEntryType = typeof SupplierLedgerEntryOutEntryType[keyof typeof SupplierLedgerEntryOutEntryType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const SupplierLedgerEntryOutEntryType = {
+  opening_balance: 'opening_balance',
+  purchase: 'purchase',
+} as const;
+
+/**
+ * One row of a Supplier's running ledger -- computed live from
+Purchase rows plus Supplier.opening_balance, never stored (same
+"computed, not a stored ledger" pattern as the Party ledger in
+schemas/party_ledger.py). Purchases increase
+the balance owed (debit); there is no symmetric "payment to supplier"
+tracking anywhere in ROADMAP.md's Phase 3 item list, so credit rows
+never appear here yet -- a real scope gap, not an oversight, flagged
+to the user when this was built.
+ */
+export interface SupplierLedgerEntryOut {
+  entry_date: string;
+  entry_type: SupplierLedgerEntryOutEntryType;
+  reference: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
 }
 
 export type SupplierUpdateRequestName = string | null;
@@ -1522,6 +1606,19 @@ skip?: number;
  */
 limit?: number;
 party_id?: string | null;
+};
+
+export type ListPurchasesParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+supplier_id?: string | null;
 };
 
 /**
@@ -2648,6 +2745,54 @@ export const updateSupplier = async (supplierId: string,
 
 
 /**
+ * @summary Get Supplier Ledger
+ */
+export const getGetSupplierLedgerUrl = (supplierId: string,) => {
+
+
+  
+
+  return `/suppliers/${supplierId}/ledger`
+}
+
+export const getSupplierLedger = async (supplierId: string, options?: RequestInit): Promise<SupplierLedgerEntryOut[]> => {
+  
+  return apiMutator<SupplierLedgerEntryOut[]>(getGetSupplierLedgerUrl(supplierId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Supplier Ledger Pdf
+ */
+export const getGetSupplierLedgerPdfUrl = (supplierId: string,) => {
+
+
+  
+
+  return `/suppliers/${supplierId}/ledger/pdf`
+}
+
+export const getSupplierLedgerPdf = async (supplierId: string, options?: RequestInit): Promise<unknown> => {
+  
+  return apiMutator<unknown>(getGetSupplierLedgerPdfUrl(supplierId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
  * @summary List Lots
  */
 export const getListLotsUrl = (params?: ListLotsParams,) => {
@@ -3707,6 +3852,86 @@ export const getGetPaymentUrl = (paymentId: string,) => {
 export const getPayment = async (paymentId: string, options?: RequestInit): Promise<PaymentDetailOut> => {
   
   return apiMutator<PaymentDetailOut>(getGetPaymentUrl(paymentId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Purchases
+ */
+export const getListPurchasesUrl = (params?: ListPurchasesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/purchases?${stringifiedParams}` : `/purchases`
+}
+
+export const listPurchases = async (params?: ListPurchasesParams, options?: RequestInit): Promise<PurchaseOut[]> => {
+  
+  return apiMutator<PurchaseOut[]>(getListPurchasesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Purchase
+ */
+export const getCreatePurchaseUrl = () => {
+
+
+  
+
+  return `/purchases`
+}
+
+export const createPurchase = async (purchaseCreateRequest: PurchaseCreateRequest, options?: RequestInit): Promise<PurchaseDetailOut> => {
+  
+  return apiMutator<PurchaseDetailOut>(getCreatePurchaseUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      purchaseCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Purchase
+ */
+export const getGetPurchaseUrl = (purchaseId: string,) => {
+
+
+  
+
+  return `/purchases/${purchaseId}`
+}
+
+export const getPurchase = async (purchaseId: string, options?: RequestInit): Promise<PurchaseDetailOut> => {
+  
+  return apiMutator<PurchaseDetailOut>(getGetPurchaseUrl(purchaseId),
   {      
     ...options,
     method: 'GET'

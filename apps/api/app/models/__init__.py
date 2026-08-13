@@ -23,6 +23,8 @@ from app.models.permission_override import UserPermissionOverride
 from app.models.production_job import ProductionJob
 from app.models.production_job_component import ProductionJobComponent
 from app.models.production_job_machine_allocation import ProductionJobMachineAllocation
+from app.models.purchase import Purchase
+from app.models.purchase_line_item import PurchaseLineItem
 from app.models.supplier import Supplier
 from app.models.tenant import Permission, Role, Tenant, User
 
@@ -57,4 +59,6 @@ __all__ = [
     "InvoiceLineItem",
     "Payment",
     "PaymentAllocation",
+    "Purchase",
+    "PurchaseLineItem",
 ]

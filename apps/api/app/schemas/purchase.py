@@ -1,0 +1,52 @@
+import uuid
+from datetime import date
+
+from pydantic import BaseModel
+
+
+class PurchaseLineItemCreateRequest(BaseModel):
+    description: str
+    quantity: int
+    unit_price: float
+
+
+class PurchaseCreateRequest(BaseModel):
+    branch_id: uuid.UUID
+    supplier_id: uuid.UUID
+    purchase_date: date
+    notes: str | None = None
+    lines: list[PurchaseLineItemCreateRequest]
+    # purchase_number excluded -- server-assigned, same pattern as Lot.lot_number.
+
+
+class PurchaseLineItemOut(BaseModel):
+    id: uuid.UUID
+    purchase_id: uuid.UUID
+    description: str
+    quantity: int
+    unit_price: float
+    line_total: float
+
+    model_config = {"from_attributes": True}
+
+
+class PurchaseOut(BaseModel):
+    id: uuid.UUID
+    branch_id: uuid.UUID
+    supplier_id: uuid.UUID
+    purchase_number: str
+    purchase_date: date
+    notes: str | None
+    # Denormalized read-only convenience field -- summed by the router, not
+    # a stored column (same reasoning as InvoiceOut.total_amount).
+    total_amount: float
+
+    model_config = {"from_attributes": True}
+
+
+class PurchaseDetailOut(PurchaseOut):
+    """Used by GET /purchases/{id} and create -- built manually by the
+    router (no ORM relationships defined on Purchase), not derived
+    automatically from response_model attribute access."""
+
+    lines: list[PurchaseLineItemOut]
