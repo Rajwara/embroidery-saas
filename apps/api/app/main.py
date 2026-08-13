@@ -10,6 +10,7 @@ from app.routers import (
     employees,
     expenses,
     factory,
+    inventory,
     invoices,
     lots,
     machines,
@@ -57,3 +58,4 @@ app.include_router(invoices.router, prefix="/invoices", tags=["invoices"])
 app.include_router(payments.router, prefix="/payments", tags=["payments"])
 app.include_router(purchases.router, prefix="/purchases", tags=["purchases"])
 app.include_router(expenses.router, prefix="/expenses", tags=["expenses"])
+app.include_router(inventory.router, prefix="/inventory-items", tags=["inventory"])

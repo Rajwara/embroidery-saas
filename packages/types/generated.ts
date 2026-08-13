@@ -474,6 +474,60 @@ export interface HTTPValidationError {
   detail?: ValidationError[];
 }
 
+export type InventoryItemCreateRequestCategory = string | null;
+
+export type InventoryItemCreateRequestNotes = string | null;
+
+export interface InventoryItemCreateRequest {
+  branch_id: string;
+  name: string;
+  unit: string;
+  category?: InventoryItemCreateRequestCategory;
+  minimum_threshold?: number;
+  notes?: InventoryItemCreateRequestNotes;
+}
+
+export type InventoryItemOutCategory = string | null;
+
+export type InventoryItemOutNotes = string | null;
+
+export interface InventoryItemOut {
+  id: string;
+  branch_id: string;
+  name: string;
+  unit: string;
+  category: InventoryItemOutCategory;
+  minimum_threshold: number;
+  notes: InventoryItemOutNotes;
+  is_active: boolean;
+  current_stock: number;
+  is_below_threshold: boolean;
+}
+
+export type InventoryItemUpdateRequestBranchId = string | null;
+
+export type InventoryItemUpdateRequestName = string | null;
+
+export type InventoryItemUpdateRequestUnit = string | null;
+
+export type InventoryItemUpdateRequestCategory = string | null;
+
+export type InventoryItemUpdateRequestMinimumThreshold = number | null;
+
+export type InventoryItemUpdateRequestNotes = string | null;
+
+export type InventoryItemUpdateRequestIsActive = boolean | null;
+
+export interface InventoryItemUpdateRequest {
+  branch_id?: InventoryItemUpdateRequestBranchId;
+  name?: InventoryItemUpdateRequestName;
+  unit?: InventoryItemUpdateRequestUnit;
+  category?: InventoryItemUpdateRequestCategory;
+  minimum_threshold?: InventoryItemUpdateRequestMinimumThreshold;
+  notes?: InventoryItemUpdateRequestNotes;
+  is_active?: InventoryItemUpdateRequestIsActive;
+}
+
 /**
  * How much of an invoice has been paid so far (sum of invoice-type
 PaymentAllocations across every payment) and what remains -- computed
@@ -1263,6 +1317,51 @@ export interface RoleUpdateRequest {
   permission_codes?: RoleUpdateRequestPermissionCodes;
 }
 
+export type StockTransactionCreateRequestTransactionType = typeof StockTransactionCreateRequestTransactionType[keyof typeof StockTransactionCreateRequestTransactionType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const StockTransactionCreateRequestTransactionType = {
+  receipt: 'receipt',
+  issue: 'issue',
+  adjustment: 'adjustment',
+} as const;
+
+export type StockTransactionCreateRequestAdjustmentDirection = 'increase' | 'decrease' | null;
+
+export type StockTransactionCreateRequestReferenceType = 'purchase' | 'production_job' | null;
+
+export type StockTransactionCreateRequestReferenceId = string | null;
+
+export type StockTransactionCreateRequestNotes = string | null;
+
+export interface StockTransactionCreateRequest {
+  transaction_type: StockTransactionCreateRequestTransactionType;
+  quantity: number;
+  adjustment_direction?: StockTransactionCreateRequestAdjustmentDirection;
+  transaction_date: string;
+  reference_type?: StockTransactionCreateRequestReferenceType;
+  reference_id?: StockTransactionCreateRequestReferenceId;
+  notes?: StockTransactionCreateRequestNotes;
+}
+
+export type StockTransactionOutReferenceType = string | null;
+
+export type StockTransactionOutReferenceId = string | null;
+
+export type StockTransactionOutNotes = string | null;
+
+export interface StockTransactionOut {
+  id: string;
+  inventory_item_id: string;
+  transaction_type: string;
+  quantity: number;
+  transaction_date: string;
+  reference_type: StockTransactionOutReferenceType;
+  reference_id: StockTransactionOutReferenceId;
+  notes: StockTransactionOutNotes;
+}
+
 export type SupplierCreateRequestContactPerson = string | null;
 
 export type SupplierCreateRequestPhone = string | null;
@@ -1657,6 +1756,33 @@ skip?: number;
 limit?: number;
 branch_id?: string | null;
 category?: string | null;
+};
+
+export type ListInventoryItemsParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+branch_id?: string | null;
+is_active?: boolean;
+below_threshold_only?: boolean;
+};
+
+export type ListStockTransactionsParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
 };
 
 /**
@@ -4031,5 +4157,170 @@ export const createExpense = async (expenseCreateRequest: ExpenseCreateRequest, 
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       expenseCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List Inventory Items
+ */
+export const getListInventoryItemsUrl = (params?: ListInventoryItemsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/inventory-items?${stringifiedParams}` : `/inventory-items`
+}
+
+export const listInventoryItems = async (params?: ListInventoryItemsParams, options?: RequestInit): Promise<InventoryItemOut[]> => {
+  
+  return apiMutator<InventoryItemOut[]>(getListInventoryItemsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Inventory Item
+ */
+export const getCreateInventoryItemUrl = () => {
+
+
+  
+
+  return `/inventory-items`
+}
+
+export const createInventoryItem = async (inventoryItemCreateRequest: InventoryItemCreateRequest, options?: RequestInit): Promise<InventoryItemOut> => {
+  
+  return apiMutator<InventoryItemOut>(getCreateInventoryItemUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      inventoryItemCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Inventory Item
+ */
+export const getGetInventoryItemUrl = (itemId: string,) => {
+
+
+  
+
+  return `/inventory-items/${itemId}`
+}
+
+export const getInventoryItem = async (itemId: string, options?: RequestInit): Promise<InventoryItemOut> => {
+  
+  return apiMutator<InventoryItemOut>(getGetInventoryItemUrl(itemId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Update Inventory Item
+ */
+export const getUpdateInventoryItemUrl = (itemId: string,) => {
+
+
+  
+
+  return `/inventory-items/${itemId}`
+}
+
+export const updateInventoryItem = async (itemId: string,
+    inventoryItemUpdateRequest: InventoryItemUpdateRequest, options?: RequestInit): Promise<InventoryItemOut> => {
+  
+  return apiMutator<InventoryItemOut>(getUpdateInventoryItemUrl(itemId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      inventoryItemUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List Stock Transactions
+ */
+export const getListStockTransactionsUrl = (itemId: string,
+    params?: ListStockTransactionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/inventory-items/${itemId}/transactions?${stringifiedParams}` : `/inventory-items/${itemId}/transactions`
+}
+
+export const listStockTransactions = async (itemId: string,
+    params?: ListStockTransactionsParams, options?: RequestInit): Promise<StockTransactionOut[]> => {
+  
+  return apiMutator<StockTransactionOut[]>(getListStockTransactionsUrl(itemId,params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Stock Transaction
+ */
+export const getCreateStockTransactionUrl = (itemId: string,) => {
+
+
+  
+
+  return `/inventory-items/${itemId}/transactions`
+}
+
+export const createStockTransaction = async (itemId: string,
+    stockTransactionCreateRequest: StockTransactionCreateRequest, options?: RequestInit): Promise<StockTransactionOut> => {
+  
+  return apiMutator<StockTransactionOut>(getCreateStockTransactionUrl(itemId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      stockTransactionCreateRequest,)
   }
 );}

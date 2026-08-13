@@ -8,6 +8,7 @@ from app.models.design_variant import DesignVariant
 from app.models.employee import Employee
 from app.models.expense import Expense
 from app.models.factory import Factory
+from app.models.inventory_item import InventoryItem
 from app.models.invoice import Invoice
 from app.models.invoice_line_item import InvoiceLineItem
 from app.models.login_history import LoginHistory
@@ -26,6 +27,7 @@ from app.models.production_job_component import ProductionJobComponent
 from app.models.production_job_machine_allocation import ProductionJobMachineAllocation
 from app.models.purchase import Purchase
 from app.models.purchase_line_item import PurchaseLineItem
+from app.models.stock_transaction import StockTransaction
 from app.models.supplier import Supplier
 from app.models.tenant import Permission, Role, Tenant, User
 
@@ -63,4 +65,6 @@ __all__ = [
     "Purchase",
     "PurchaseLineItem",
     "Expense",
+    "InventoryItem",
+    "StockTransaction",
 ]
