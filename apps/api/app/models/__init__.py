@@ -1,11 +1,16 @@
+from app.models.advance import Advance
+from app.models.advance_installment import AdvanceInstallment
 from app.models.audit_log import AuditLog
 from app.models.base import Base
+from app.models.bonus import Bonus
 from app.models.branch import Branch
+from app.models.deduction import Deduction
 from app.models.delivery_challan import DeliveryChallan
 from app.models.delivery_challan_line import DeliveryChallanLine
 from app.models.design import Design
 from app.models.design_variant import DesignVariant
 from app.models.employee import Employee
+from app.models.employee_salary_profile import EmployeeSalaryProfile
 from app.models.expense import Expense
 from app.models.factory import Factory
 from app.models.inventory_item import InventoryItem
@@ -21,6 +26,8 @@ from app.models.party import Party
 from app.models.password_reset_token import PasswordResetToken
 from app.models.payment import Payment
 from app.models.payment_allocation import PaymentAllocation
+from app.models.payroll_entry import PayrollEntry
+from app.models.payroll_run import PayrollRun
 from app.models.permission_override import UserPermissionOverride
 from app.models.production_job import ProductionJob
 from app.models.production_job_component import ProductionJobComponent
@@ -69,4 +76,11 @@ __all__ = [
     "InventoryItem",
     "StockTransaction",
     "PurchaseRequired",
+    "EmployeeSalaryProfile",
+    "Advance",
+    "AdvanceInstallment",
+    "Bonus",
+    "Deduction",
+    "PayrollRun",
+    "PayrollEntry",
 ]

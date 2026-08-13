@@ -10,6 +10,55 @@ export interface AccessTokenResponse {
   token_type?: string;
 }
 
+export type AdvanceCreateRequestReason = string | null;
+
+export interface AdvanceCreateRequest {
+  employee_id: string;
+  advance_date: string;
+  amount: number;
+  reason?: AdvanceCreateRequestReason;
+}
+
+export type AdvanceDetailOutReason = string | null;
+
+export interface AdvanceDetailOut {
+  id: string;
+  employee_id: string;
+  advance_date: string;
+  amount: number;
+  reason: AdvanceDetailOutReason;
+  employee_name: string;
+  remaining_balance: number;
+  installments: AdvanceInstallmentOut[];
+}
+
+export interface AdvanceInstallmentCreateRequest {
+  employee_id: string;
+  advance_id: string;
+  amount: number;
+  installment_date: string;
+}
+
+export interface AdvanceInstallmentOut {
+  id: string;
+  advance_id: string;
+  payroll_run_id: string;
+  amount: number;
+  installment_date: string;
+}
+
+export type AdvanceOutReason = string | null;
+
+export interface AdvanceOut {
+  id: string;
+  employee_id: string;
+  advance_date: string;
+  amount: number;
+  reason: AdvanceOutReason;
+  employee_name: string;
+  remaining_balance: number;
+}
+
 export type AdvancePurchaseRequiredRequestReceivedQuantity = number | null;
 
 export interface AdvancePurchaseRequiredRequest {
@@ -18,6 +67,24 @@ export interface AdvancePurchaseRequiredRequest {
 
 export interface AllocateComponentRequest {
   allocations: MachineAllocationInput[];
+}
+
+export type BonusCreateRequestReason = string | null;
+
+export interface BonusCreateRequest {
+  employee_id: string;
+  amount: number;
+  reason?: BonusCreateRequestReason;
+}
+
+export type BonusOutReason = string | null;
+
+export interface BonusOut {
+  id: string;
+  employee_id: string;
+  payroll_run_id: string;
+  amount: number;
+  reason: BonusOutReason;
 }
 
 export type BranchCreateRequestAddress = string | null;
@@ -75,6 +142,24 @@ export interface BranchUpdateRequest {
   phone?: BranchUpdateRequestPhone;
   is_head_office?: BranchUpdateRequestIsHeadOffice;
   is_active?: BranchUpdateRequestIsActive;
+}
+
+export type DeductionCreateRequestReason = string | null;
+
+export interface DeductionCreateRequest {
+  employee_id: string;
+  amount: number;
+  reason?: DeductionCreateRequestReason;
+}
+
+export type DeductionOutReason = string | null;
+
+export interface DeductionOut {
+  id: string;
+  employee_id: string;
+  payroll_run_id: string;
+  amount: number;
+  reason: DeductionOutReason;
 }
 
 export type DeliveryChallanCreateRequestNotes = string | null;
@@ -292,6 +377,33 @@ export interface EmployeePerformanceOut {
   total_quantity: number;
   entry_count: number;
   percentage_of_total: number;
+}
+
+export type EmployeeSalaryProfileCreateRequestNotes = string | null;
+
+export interface EmployeeSalaryProfileCreateRequest {
+  employee_id: string;
+  basic_salary: number;
+  notes?: EmployeeSalaryProfileCreateRequestNotes;
+}
+
+export type EmployeeSalaryProfileOutNotes = string | null;
+
+export interface EmployeeSalaryProfileOut {
+  id: string;
+  employee_id: string;
+  basic_salary: number;
+  notes: EmployeeSalaryProfileOutNotes;
+  employee_name: string;
+}
+
+export type EmployeeSalaryProfileUpdateRequestBasicSalary = number | null;
+
+export type EmployeeSalaryProfileUpdateRequestNotes = string | null;
+
+export interface EmployeeSalaryProfileUpdateRequest {
+  basic_salary?: EmployeeSalaryProfileUpdateRequestBasicSalary;
+  notes?: EmployeeSalaryProfileUpdateRequestNotes;
 }
 
 export type EmployeeUpdateRequestEmployeeCode = string | null;
@@ -1145,6 +1257,49 @@ export interface PaymentOut {
   notes: PaymentOutNotes;
 }
 
+export interface PayrollEntryOut {
+  id: string;
+  payroll_run_id: string;
+  employee_id: string;
+  employee_name: string;
+  basic_salary: number;
+  total_bonus: number;
+  total_deduction: number;
+  total_advance_recovery: number;
+  net_pay: number;
+}
+
+export interface PayrollRunCreateRequest {
+  branch_id: string;
+  year: number;
+  month: number;
+  run_date: string;
+}
+
+/**
+ * Used by GET /payroll-runs/{id} -- built manually by the router (no
+ORM relationships defined on PayrollRun), not derived automatically
+from response_model attribute access.
+ */
+export interface PayrollRunDetailOut {
+  id: string;
+  branch_id: string;
+  year: number;
+  month: number;
+  run_date: string;
+  status: string;
+  entries: PayrollEntryOut[];
+}
+
+export interface PayrollRunOut {
+  id: string;
+  branch_id: string;
+  year: number;
+  month: number;
+  run_date: string;
+  status: string;
+}
+
 export interface PermissionOut {
   id: string;
   code: string;
@@ -1754,6 +1909,15 @@ skip?: number;
  */
 limit?: number;
 party_id?: string | null;
+};
+
+export type ListAdvancesParams = {
+employee_id?: string | null;
+open_only?: boolean;
+};
+
+export type ListPayrollRunsParams = {
+branch_id?: string | null;
 };
 
 export type ListPurchasesParams = {
@@ -4055,6 +4219,369 @@ export const getGetPaymentUrl = (paymentId: string,) => {
 export const getPayment = async (paymentId: string, options?: RequestInit): Promise<PaymentDetailOut> => {
   
   return apiMutator<PaymentDetailOut>(getGetPaymentUrl(paymentId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Salary Profiles
+ */
+export const getListSalaryProfilesUrl = () => {
+
+
+  
+
+  return `/salary-profiles`
+}
+
+export const listSalaryProfiles = async ( options?: RequestInit): Promise<EmployeeSalaryProfileOut[]> => {
+  
+  return apiMutator<EmployeeSalaryProfileOut[]>(getListSalaryProfilesUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Salary Profile
+ */
+export const getCreateSalaryProfileUrl = () => {
+
+
+  
+
+  return `/salary-profiles`
+}
+
+export const createSalaryProfile = async (employeeSalaryProfileCreateRequest: EmployeeSalaryProfileCreateRequest, options?: RequestInit): Promise<EmployeeSalaryProfileOut> => {
+  
+  return apiMutator<EmployeeSalaryProfileOut>(getCreateSalaryProfileUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      employeeSalaryProfileCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Update Salary Profile
+ */
+export const getUpdateSalaryProfileUrl = (profileId: string,) => {
+
+
+  
+
+  return `/salary-profiles/${profileId}`
+}
+
+export const updateSalaryProfile = async (profileId: string,
+    employeeSalaryProfileUpdateRequest: EmployeeSalaryProfileUpdateRequest, options?: RequestInit): Promise<EmployeeSalaryProfileOut> => {
+  
+  return apiMutator<EmployeeSalaryProfileOut>(getUpdateSalaryProfileUrl(profileId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      employeeSalaryProfileUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List Advances
+ */
+export const getListAdvancesUrl = (params?: ListAdvancesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/advances?${stringifiedParams}` : `/advances`
+}
+
+export const listAdvances = async (params?: ListAdvancesParams, options?: RequestInit): Promise<AdvanceOut[]> => {
+  
+  return apiMutator<AdvanceOut[]>(getListAdvancesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Advance
+ */
+export const getCreateAdvanceUrl = () => {
+
+
+  
+
+  return `/advances`
+}
+
+export const createAdvance = async (advanceCreateRequest: AdvanceCreateRequest, options?: RequestInit): Promise<AdvanceOut> => {
+  
+  return apiMutator<AdvanceOut>(getCreateAdvanceUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      advanceCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Advance
+ */
+export const getGetAdvanceUrl = (advanceId: string,) => {
+
+
+  
+
+  return `/advances/${advanceId}`
+}
+
+export const getAdvance = async (advanceId: string, options?: RequestInit): Promise<AdvanceDetailOut> => {
+  
+  return apiMutator<AdvanceDetailOut>(getGetAdvanceUrl(advanceId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Payroll Runs
+ */
+export const getListPayrollRunsUrl = (params?: ListPayrollRunsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/payroll-runs?${stringifiedParams}` : `/payroll-runs`
+}
+
+export const listPayrollRuns = async (params?: ListPayrollRunsParams, options?: RequestInit): Promise<PayrollRunOut[]> => {
+  
+  return apiMutator<PayrollRunOut[]>(getListPayrollRunsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Payroll Run
+ */
+export const getCreatePayrollRunUrl = () => {
+
+
+  
+
+  return `/payroll-runs`
+}
+
+export const createPayrollRun = async (payrollRunCreateRequest: PayrollRunCreateRequest, options?: RequestInit): Promise<PayrollRunDetailOut> => {
+  
+  return apiMutator<PayrollRunDetailOut>(getCreatePayrollRunUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      payrollRunCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Payroll Run
+ */
+export const getGetPayrollRunUrl = (runId: string,) => {
+
+
+  
+
+  return `/payroll-runs/${runId}`
+}
+
+export const getPayrollRun = async (runId: string, options?: RequestInit): Promise<PayrollRunDetailOut> => {
+  
+  return apiMutator<PayrollRunDetailOut>(getGetPayrollRunUrl(runId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Add Bonus
+ */
+export const getAddBonusUrl = (runId: string,) => {
+
+
+  
+
+  return `/payroll-runs/${runId}/bonuses`
+}
+
+export const addBonus = async (runId: string,
+    bonusCreateRequest: BonusCreateRequest, options?: RequestInit): Promise<BonusOut> => {
+  
+  return apiMutator<BonusOut>(getAddBonusUrl(runId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      bonusCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Add Deduction
+ */
+export const getAddDeductionUrl = (runId: string,) => {
+
+
+  
+
+  return `/payroll-runs/${runId}/deductions`
+}
+
+export const addDeduction = async (runId: string,
+    deductionCreateRequest: DeductionCreateRequest, options?: RequestInit): Promise<DeductionOut> => {
+  
+  return apiMutator<DeductionOut>(getAddDeductionUrl(runId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deductionCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Add Advance Installment
+ */
+export const getAddAdvanceInstallmentUrl = (runId: string,) => {
+
+
+  
+
+  return `/payroll-runs/${runId}/advance-installments`
+}
+
+export const addAdvanceInstallment = async (runId: string,
+    advanceInstallmentCreateRequest: AdvanceInstallmentCreateRequest, options?: RequestInit): Promise<AdvanceInstallmentOut> => {
+  
+  return apiMutator<AdvanceInstallmentOut>(getAddAdvanceInstallmentUrl(runId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      advanceInstallmentCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Approve Payroll Run
+ */
+export const getApprovePayrollRunUrl = (runId: string,) => {
+
+
+  
+
+  return `/payroll-runs/${runId}/approve`
+}
+
+export const approvePayrollRun = async (runId: string, options?: RequestInit): Promise<PayrollRunDetailOut> => {
+  
+  return apiMutator<PayrollRunDetailOut>(getApprovePayrollRunUrl(runId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Salary Slip Pdf
+ */
+export const getGetSalarySlipPdfUrl = (runId: string,
+    employeeId: string,) => {
+
+
+  
+
+  return `/payroll-runs/${runId}/entries/${employeeId}/pdf`
+}
+
+export const getSalarySlipPdf = async (runId: string,
+    employeeId: string, options?: RequestInit): Promise<unknown> => {
+  
+  return apiMutator<unknown>(getGetSalarySlipPdfUrl(runId,employeeId),
   {      
     ...options,
     method: 'GET'

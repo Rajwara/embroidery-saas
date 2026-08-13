@@ -84,6 +84,10 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("inventory.create", "Create inventory items and stock transactions"),
     ("inventory.edit", "Edit inventory items"),
     ("inventory.export", "Export inventory data"),
+    ("payroll.view", "View payroll"),
+    ("payroll.create", "Create payroll runs, bonuses, deductions, advances"),
+    ("payroll.approve", "Approve payroll runs"),
+    ("payroll.export", "Export payroll data"),
 ]
 
 ROLE_TEMPLATES: list[dict] = [
@@ -108,6 +112,7 @@ ROLE_TEMPLATES: list[dict] = [
             "purchases.view", "purchases.create", "purchases.export",
             "expenses.view", "expenses.create", "expenses.export",
             "inventory.view", "inventory.create", "inventory.edit", "inventory.export",
+            "payroll.view", "payroll.create", "payroll.approve", "payroll.export",
         ],
     },
     {
@@ -131,6 +136,7 @@ ROLE_TEMPLATES: list[dict] = [
             "purchases.view", "purchases.create", "purchases.export",
             "expenses.view", "expenses.create", "expenses.export",
             "inventory.view", "inventory.export",
+            "payroll.view", "payroll.create", "payroll.export",
         ],
     },
     {
