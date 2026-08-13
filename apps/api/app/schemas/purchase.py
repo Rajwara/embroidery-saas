@@ -8,6 +8,11 @@ class PurchaseLineItemCreateRequest(BaseModel):
     description: str
     quantity: int
     unit_price: float
+    # Optional -- when set, creating the Purchase auto-generates a
+    # "receipt" StockTransaction for this line's quantity against that
+    # item (see routers/purchases.py). This is the actual "purchases
+    # update inventory" wiring Phase 3 deferred until InventoryItem existed.
+    inventory_item_id: uuid.UUID | None = None
 
 
 class PurchaseCreateRequest(BaseModel):
@@ -26,6 +31,7 @@ class PurchaseLineItemOut(BaseModel):
     quantity: int
     unit_price: float
     line_total: float
+    inventory_item_id: uuid.UUID | None
 
     model_config = {"from_attributes": True}
 

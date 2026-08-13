@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
-from app.models import Branch, InventoryItem, StockTransaction, User
+from app.models import Branch, InventoryItem, PurchaseRequired, StockTransaction, User
 from app.schemas.inventory import (
     InventoryItemCreateRequest,
     InventoryItemOut,
@@ -239,6 +239,32 @@ def create_stock_transaction(
         ip_address=ip_address,
         user_agent=user_agent,
     )
+
+    # Auto-populate Purchase Required (ROADMAP.md item 3) if this
+    # transaction pushed stock below threshold and there's no other open
+    # (non-"received") request for this item already -- never more than
+    # one open request per item at a time. The transaction was already
+    # flushed above, so _current_stock already reflects it -- adding
+    # signed_quantity again here would double-count.
+    new_stock = _current_stock(db, item.id)
+    if new_stock < item.minimum_threshold:
+        existing_open = (
+            db.query(PurchaseRequired)
+            .filter(
+                PurchaseRequired.inventory_item_id == item.id,
+                PurchaseRequired.status != "received",
+            )
+            .first()
+        )
+        if existing_open is None:
+            db.add(
+                PurchaseRequired(
+                    tenant_id=user.tenant_id,
+                    inventory_item_id=item.id,
+                    status="purchase_required",
+                    requested_quantity=item.minimum_threshold,
+                )
+            )
 
     db.commit()
     set_tenant_context(db, str(user.tenant_id))

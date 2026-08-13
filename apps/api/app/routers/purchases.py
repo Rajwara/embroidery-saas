@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
-from app.models import Branch, Factory, Purchase, PurchaseLineItem, Supplier, User
+from app.models import Branch, Factory, InventoryItem, Purchase, PurchaseLineItem, StockTransaction, Supplier, User
 from app.schemas.purchase import (
     PurchaseCreateRequest,
     PurchaseDetailOut,
@@ -93,6 +93,8 @@ def create_purchase(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="quantity_must_be_positive")
         if line.unit_price <= 0:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="unit_price_must_be_positive")
+        if line.inventory_item_id is not None and db.get(InventoryItem, line.inventory_item_id) is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="inventory_item_not_found")
 
     # Locked for the rest of this transaction -- serializes concurrent
     # create_purchase calls so two requests can never be assigned the same
@@ -119,6 +121,7 @@ def create_purchase(
         line = PurchaseLineItem(
             tenant_id=user.tenant_id,
             purchase_id=purchase.id,
+            inventory_item_id=line_payload.inventory_item_id,
             description=line_payload.description,
             quantity=line_payload.quantity,
             unit_price=line_payload.unit_price,
@@ -126,6 +129,23 @@ def create_purchase(
         )
         db.add(line)
         lines.append(line)
+
+        # "purchases update inventory" (ROADMAP.md Phase 3 item 8, wired up
+        # now that InventoryItem exists) -- auto-receipt this line's
+        # quantity against the linked item, same as any other stock receipt.
+        if line_payload.inventory_item_id is not None:
+            db.add(
+                StockTransaction(
+                    tenant_id=user.tenant_id,
+                    inventory_item_id=line_payload.inventory_item_id,
+                    transaction_type="receipt",
+                    quantity=line_payload.quantity,
+                    transaction_date=payload.purchase_date,
+                    reference_type="purchase",
+                    reference_id=purchase.id,
+                    notes=f"Auto-created from Purchase {purchase_number}",
+                )
+            )
 
     ip_address, user_agent = client_meta(request)
     record_audit(

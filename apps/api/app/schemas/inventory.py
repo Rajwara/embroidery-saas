@@ -73,3 +73,25 @@ class StockTransactionOut(BaseModel):
     notes: str | None
 
     model_config = {"from_attributes": True}
+
+
+class PurchaseRequiredOut(BaseModel):
+    id: uuid.UUID
+    inventory_item_id: uuid.UUID
+    status: str
+    requested_quantity: int
+    notes: str | None
+    # Denormalized read-only convenience fields -- joined in by the router,
+    # not stored columns (same reasoning as ProductionJobOut's enrichment).
+    item_name: str
+    item_unit: str
+    current_stock: int
+
+    model_config = {"from_attributes": True}
+
+
+class AdvancePurchaseRequiredRequest(BaseModel):
+    # Only meaningful on the final purchased -> received transition -- lets
+    # staff record a different quantity than requested_quantity if that's
+    # what actually arrived. Ignored on every earlier transition.
+    received_quantity: int | None = None

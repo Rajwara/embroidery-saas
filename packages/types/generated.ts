@@ -10,6 +10,12 @@ export interface AccessTokenResponse {
   token_type?: string;
 }
 
+export type AdvancePurchaseRequiredRequestReceivedQuantity = number | null;
+
+export interface AdvancePurchaseRequiredRequest {
+  received_quantity?: AdvancePurchaseRequiredRequestReceivedQuantity;
+}
+
 export interface AllocateComponentRequest {
   allocations: MachineAllocationInput[];
 }
@@ -1233,11 +1239,16 @@ export interface PurchaseDetailOut {
   lines: PurchaseLineItemOut[];
 }
 
+export type PurchaseLineItemCreateRequestInventoryItemId = string | null;
+
 export interface PurchaseLineItemCreateRequest {
   description: string;
   quantity: number;
   unit_price: number;
+  inventory_item_id?: PurchaseLineItemCreateRequestInventoryItemId;
 }
+
+export type PurchaseLineItemOutInventoryItemId = string | null;
 
 export interface PurchaseLineItemOut {
   id: string;
@@ -1246,6 +1257,7 @@ export interface PurchaseLineItemOut {
   quantity: number;
   unit_price: number;
   line_total: number;
+  inventory_item_id: PurchaseLineItemOutInventoryItemId;
 }
 
 export type PurchaseOutNotes = string | null;
@@ -1258,6 +1270,19 @@ export interface PurchaseOut {
   purchase_date: string;
   notes: PurchaseOutNotes;
   total_amount: number;
+}
+
+export type PurchaseRequiredOutNotes = string | null;
+
+export interface PurchaseRequiredOut {
+  id: string;
+  inventory_item_id: string;
+  status: string;
+  requested_quantity: number;
+  notes: PurchaseRequiredOutNotes;
+  item_name: string;
+  item_unit: string;
+  current_stock: number;
 }
 
 /**
@@ -1783,6 +1808,20 @@ skip?: number;
  * @maximum 200
  */
 limit?: number;
+};
+
+export type ListPurchaseRequiredParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+status?: string | null;
+open_only?: boolean;
 };
 
 /**
@@ -4322,5 +4361,62 @@ export const createStockTransaction = async (itemId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       stockTransactionCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary List Purchase Required
+ */
+export const getListPurchaseRequiredUrl = (params?: ListPurchaseRequiredParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/purchase-required?${stringifiedParams}` : `/purchase-required`
+}
+
+export const listPurchaseRequired = async (params?: ListPurchaseRequiredParams, options?: RequestInit): Promise<PurchaseRequiredOut[]> => {
+  
+  return apiMutator<PurchaseRequiredOut[]>(getListPurchaseRequiredUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Advance Purchase Required
+ */
+export const getAdvancePurchaseRequiredUrl = (requestId: string,) => {
+
+
+  
+
+  return `/purchase-required/${requestId}/advance`
+}
+
+export const advancePurchaseRequired = async (requestId: string,
+    advancePurchaseRequiredRequest: AdvancePurchaseRequiredRequest, options?: RequestInit): Promise<PurchaseRequiredOut> => {
+  
+  return apiMutator<PurchaseRequiredOut>(getAdvancePurchaseRequiredUrl(requestId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      advancePurchaseRequiredRequest,)
   }
 );}
