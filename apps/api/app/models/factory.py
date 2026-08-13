@@ -36,3 +36,6 @@ class Factory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # Same pattern as next_lot_number, for DeliveryChallan.challan_number
     # (e.g. "CH-000001") -- see routers/delivery_challans.py.
     next_challan_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Same pattern, for Invoice.invoice_number (e.g. "INV-000001") -- see
+    # routers/invoices.py.
+    next_invoice_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

@@ -32,6 +32,14 @@ class DesignOut(BaseModel):
 class DesignVariantCreateRequest(BaseModel):
     component_type: ComponentType
     colour_variant_code: str
+    stitch_count: int | None = None
+
+
+class DesignVariantUpdateRequest(BaseModel):
+    # PATCH semantics: None means "don't touch this field", matching
+    # schemas/branch.py's BranchUpdateRequest convention. stitch_count is
+    # the only editable field -- everything else is immutable once created.
+    stitch_count: int | None = None
 
 
 class DesignVariantOut(BaseModel):
@@ -41,6 +49,7 @@ class DesignVariantOut(BaseModel):
     component_letter: str
     colour_variant_code: str
     variant_code: str
+    stitch_count: int | None
 
     model_config = {"from_attributes": True}
 

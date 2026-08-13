@@ -189,10 +189,15 @@ export const DesignVariantCreateRequestComponentType = {
   dupatta: 'dupatta',
 } as const;
 
+export type DesignVariantCreateRequestStitchCount = number | null;
+
 export interface DesignVariantCreateRequest {
   component_type: DesignVariantCreateRequestComponentType;
   colour_variant_code: string;
+  stitch_count?: DesignVariantCreateRequestStitchCount;
 }
+
+export type DesignVariantOutStitchCount = number | null;
 
 export interface DesignVariantOut {
   id: string;
@@ -201,6 +206,13 @@ export interface DesignVariantOut {
   component_letter: string;
   colour_variant_code: string;
   variant_code: string;
+  stitch_count: DesignVariantOutStitchCount;
+}
+
+export type DesignVariantUpdateRequestStitchCount = number | null;
+
+export interface DesignVariantUpdateRequest {
+  stitch_count?: DesignVariantUpdateRequestStitchCount;
 }
 
 export interface EffectivePermissionsResponse {
@@ -436,6 +448,100 @@ export interface ForgotPasswordRequest {
 
 export interface HTTPValidationError {
   detail?: ValidationError[];
+}
+
+export type InvoiceCreateRequestDueDate = string | null;
+
+export type InvoiceCreateRequestNotes = string | null;
+
+export interface InvoiceCreateRequest {
+  branch_id: string;
+  party_id: string;
+  invoice_date: string;
+  due_date?: InvoiceCreateRequestDueDate;
+  notes?: InvoiceCreateRequestNotes;
+  lines: InvoiceLineItemCreateRequest[];
+}
+
+export type InvoiceDetailOutDueDate = string | null;
+
+export type InvoiceDetailOutNotes = string | null;
+
+/**
+ * Used by GET /invoices/{id} and create -- built manually by the
+router (no ORM relationships defined on Invoice), not derived
+automatically from response_model attribute access.
+ */
+export interface InvoiceDetailOut {
+  id: string;
+  branch_id: string;
+  party_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: InvoiceDetailOutDueDate;
+  notes: InvoiceDetailOutNotes;
+  total_amount: number;
+  lines: InvoiceLineItemOut[];
+}
+
+export type InvoiceLineItemCreateRequestPricingType = typeof InvoiceLineItemCreateRequestPricingType[keyof typeof InvoiceLineItemCreateRequestPricingType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const InvoiceLineItemCreateRequestPricingType = {
+  per_suit: 'per_suit',
+  stitch_based: 'stitch_based',
+} as const;
+
+export type InvoiceLineItemCreateRequestUnitPrice = number | null;
+
+export type InvoiceLineItemCreateRequestDesignVariantId = string | null;
+
+export type InvoiceLineItemCreateRequestRatePerThousandStitches = number | null;
+
+export interface InvoiceLineItemCreateRequest {
+  description: string;
+  pricing_type: InvoiceLineItemCreateRequestPricingType;
+  quantity: number;
+  unit_price?: InvoiceLineItemCreateRequestUnitPrice;
+  design_variant_id?: InvoiceLineItemCreateRequestDesignVariantId;
+  rate_per_thousand_stitches?: InvoiceLineItemCreateRequestRatePerThousandStitches;
+}
+
+export type InvoiceLineItemOutUnitPrice = number | null;
+
+export type InvoiceLineItemOutDesignVariantId = string | null;
+
+export type InvoiceLineItemOutStitchCount = number | null;
+
+export type InvoiceLineItemOutRatePerThousandStitches = number | null;
+
+export interface InvoiceLineItemOut {
+  id: string;
+  invoice_id: string;
+  description: string;
+  pricing_type: string;
+  quantity: number;
+  unit_price: InvoiceLineItemOutUnitPrice;
+  design_variant_id: InvoiceLineItemOutDesignVariantId;
+  stitch_count: InvoiceLineItemOutStitchCount;
+  rate_per_thousand_stitches: InvoiceLineItemOutRatePerThousandStitches;
+  line_total: number;
+}
+
+export type InvoiceOutDueDate = string | null;
+
+export type InvoiceOutNotes = string | null;
+
+export interface InvoiceOut {
+  id: string;
+  branch_id: string;
+  party_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: InvoiceOutDueDate;
+  notes: InvoiceOutNotes;
+  total_amount: number;
 }
 
 export type LoginRequestTotpCode = string | null;
@@ -1248,6 +1354,19 @@ party_id: string;
 };
 
 export type ListDeliveryChallansParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+party_id?: string | null;
+};
+
+export type ListInvoicesParams = {
 /**
  * @minimum 0
  */
@@ -2702,6 +2821,34 @@ export const addDesignVariant = async (designId: string,
 
 
 /**
+ * @summary Update Design Variant
+ */
+export const getUpdateDesignVariantUrl = (designId: string,
+    variantId: string,) => {
+
+
+  
+
+  return `/designs/${designId}/variants/${variantId}`
+}
+
+export const updateDesignVariant = async (designId: string,
+    variantId: string,
+    designVariantUpdateRequest: DesignVariantUpdateRequest, options?: RequestInit): Promise<DesignVariantOut> => {
+  
+  return apiMutator<DesignVariantOut>(getUpdateDesignVariantUrl(designId,variantId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      designVariantUpdateRequest,)
+  }
+);}
+
+
+
+/**
  * @summary Remove Design Variant
  */
 export const getRemoveDesignVariantUrl = (designId: string,
@@ -3152,6 +3299,110 @@ export const getGetDeliveryChallanPdfUrl = (challanId: string,) => {
 export const getDeliveryChallanPdf = async (challanId: string, options?: RequestInit): Promise<unknown> => {
   
   return apiMutator<unknown>(getGetDeliveryChallanPdfUrl(challanId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Invoices
+ */
+export const getListInvoicesUrl = (params?: ListInvoicesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/invoices?${stringifiedParams}` : `/invoices`
+}
+
+export const listInvoices = async (params?: ListInvoicesParams, options?: RequestInit): Promise<InvoiceOut[]> => {
+  
+  return apiMutator<InvoiceOut[]>(getListInvoicesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Invoice
+ */
+export const getCreateInvoiceUrl = () => {
+
+
+  
+
+  return `/invoices`
+}
+
+export const createInvoice = async (invoiceCreateRequest: InvoiceCreateRequest, options?: RequestInit): Promise<InvoiceDetailOut> => {
+  
+  return apiMutator<InvoiceDetailOut>(getCreateInvoiceUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      invoiceCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Invoice
+ */
+export const getGetInvoiceUrl = (invoiceId: string,) => {
+
+
+  
+
+  return `/invoices/${invoiceId}`
+}
+
+export const getInvoice = async (invoiceId: string, options?: RequestInit): Promise<InvoiceDetailOut> => {
+  
+  return apiMutator<InvoiceDetailOut>(getGetInvoiceUrl(invoiceId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Invoice Pdf
+ */
+export const getGetInvoicePdfUrl = (invoiceId: string,) => {
+
+
+  
+
+  return `/invoices/${invoiceId}/pdf`
+}
+
+export const getInvoicePdf = async (invoiceId: string, options?: RequestInit): Promise<unknown> => {
+  
+  return apiMutator<unknown>(getGetInvoicePdfUrl(invoiceId),
   {      
     ...options,
     method: 'GET'

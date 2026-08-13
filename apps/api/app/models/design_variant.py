@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -38,3 +38,9 @@ class DesignVariant(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     component_letter: Mapped[str] = mapped_column(String(1), nullable=False)
     colour_variant_code: Mapped[str] = mapped_column(String(50), nullable=False)
     variant_code: Mapped[str] = mapped_column(String(80), nullable=False)
+    # Nullable -- existing variants predate this field and need backfilling
+    # via update_design_variant. Stitch-based invoice pricing (Phase 3 item
+    # 3) always uses this declared count, never a machine-reported stitch
+    # figure (no such figure is tracked anywhere -- MachineProductionEntry
+    # only records piece quantity, not stitches).
+    stitch_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

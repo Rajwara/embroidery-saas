@@ -7,6 +7,8 @@ from app.models.design import Design
 from app.models.design_variant import DesignVariant
 from app.models.employee import Employee
 from app.models.factory import Factory
+from app.models.invoice import Invoice
+from app.models.invoice_line_item import InvoiceLineItem
 from app.models.login_history import LoginHistory
 from app.models.lot import Lot
 from app.models.lot_colour import LotColour
@@ -49,4 +51,6 @@ __all__ = [
     "MachineProductionEntry",
     "DeliveryChallan",
     "DeliveryChallanLine",
+    "Invoice",
+    "InvoiceLineItem",
 ]

@@ -15,6 +15,7 @@ from app.schemas.design import (
     DesignUpdateRequest,
     DesignVariantCreateRequest,
     DesignVariantOut,
+    DesignVariantUpdateRequest,
 )
 
 router = APIRouter()
@@ -178,6 +179,7 @@ def add_design_variant(
         component_letter=component_letter,
         colour_variant_code=payload.colour_variant_code,
         variant_code=variant_code,
+        stitch_count=payload.stitch_count,
     )
     db.add(variant)
     db.flush()  # populate variant.id -- Python-side default, not set until flush
@@ -194,6 +196,51 @@ def add_design_variant(
         ip_address=ip_address,
         user_agent=user_agent,
     )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(variant)
+    return variant
+
+
+@router.patch(
+    "/{design_id}/variants/{variant_id}",
+    response_model=DesignVariantOut,
+    operation_id="updateDesignVariant",
+)
+def update_design_variant(
+    design_id: uuid.UUID,
+    variant_id: uuid.UUID,
+    payload: DesignVariantUpdateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("designs.edit")),
+) -> DesignVariant:
+    design = db.get(Design, design_id)
+    if design is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="design_not_found")
+
+    variant = db.get(DesignVariant, variant_id)
+    if variant is None or variant.design_id != design.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="variant_not_found")
+
+    old_stitch_count = variant.stitch_count
+    variant.stitch_count = payload.stitch_count
+
+    if old_stitch_count != payload.stitch_count:
+        ip_address, user_agent = client_meta(request)
+        record_audit(
+            db,
+            tenant_id=user.tenant_id,
+            actor_user_id=user.id,
+            action="update_variant",
+            entity_type="design",
+            entity_id=design.id,
+            old_values={"stitch_count": old_stitch_count},
+            new_values={"stitch_count": payload.stitch_count},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
 
     db.commit()
     set_tenant_context(db, str(user.tenant_id))
