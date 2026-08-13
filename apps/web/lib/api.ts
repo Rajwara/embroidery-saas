@@ -82,3 +82,22 @@ export async function apiFetch<T>(
   if (res.status === 204) return undefined as T;
   return res.json();
 }
+
+// Separate from apiFetch because print/PDF endpoints return
+// application/pdf, not JSON -- apiFetch's res.json() would throw on a
+// binary body. No 401-refresh-retry here (print views are a secondary
+// action off an already-loaded page; a session expired between page load
+// and clicking "Print" is rare enough to just surface as an error).
+export async function fetchPdfBlob(path: string): Promise<Blob> {
+  const tokens = getTokens();
+  const headers = new Headers();
+  if (tokens?.access_token) {
+    headers.set("Authorization", `Bearer ${tokens.access_token}`);
+  }
+
+  const res = await fetch(`${API_URL}${path}`, { headers });
+  if (!res.ok) {
+    throw new ApiError(res.status, "pdf_fetch_failed");
+  }
+  return res.blob();
+}

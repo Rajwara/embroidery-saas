@@ -1,6 +1,7 @@
+import html as html_escape
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,7 @@ from app.models import (
     ProductionJobMachineAllocation,
     User,
 )
+from app.pdf import html_to_pdf
 from app.schemas.delivery_challan import (
     DeliveryChallanCreateRequest,
     DeliveryChallanDetailOut,
@@ -31,6 +33,41 @@ from app.schemas.delivery_challan import (
 )
 
 router = APIRouter()
+
+UNIT_TYPE_LABELS = {"shirt": "Shirt", "dupatta": "Dupatta", "trouser": "Trouser"}
+
+CHALLAN_PDF_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {{ size: A4; margin: 2cm; }}
+  body {{ font-family: sans-serif; font-size: 12px; color: #111; }}
+  h1 {{ font-size: 20px; margin: 0 0 4px 0; }}
+  .meta {{ margin-bottom: 24px; color: #444; line-height: 1.6; }}
+  table {{ width: 100%; border-collapse: collapse; margin-top: 16px; }}
+  th, td {{ border: 1px solid #ccc; padding: 6px 8px; text-align: left; }}
+  th {{ background: #f3f3f3; }}
+  .totals {{ margin-top: 12px; font-weight: bold; text-align: right; }}
+</style>
+</head>
+<body>
+  <h1>Delivery Challan {challan_number}</h1>
+  <div class="meta">
+    <div><strong>Date:</strong> {delivery_date}</div>
+    <div><strong>To:</strong> {party_name}</div>
+    <div><strong>Branch:</strong> {branch_name}</div>
+    {notes_html}
+  </div>
+  <table>
+    <thead><tr><th>Lot #</th><th>Colour</th><th>Unit</th><th>Quantity</th></tr></thead>
+    <tbody>
+      {rows}
+    </tbody>
+  </table>
+  <div class="totals">Total pieces: {total_quantity}</div>
+</body>
+</html>"""
 
 # unit_type -> the LotComponent/ProductionJobComponent component_types it's
 # made of. "shirt" is a 3-way roll-up (see [[domain_production_job]]
@@ -285,3 +322,49 @@ def get_delivery_challan(
     if challan is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="challan_not_found")
     return _build_challan_detail(db, challan)
+
+
+@router.get("/{challan_id}/pdf", operation_id="getDeliveryChallanPdf")
+def get_delivery_challan_pdf(
+    challan_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("delivery_challans.view")),
+) -> Response:
+    challan = db.get(DeliveryChallan, challan_id)
+    if challan is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="challan_not_found")
+    detail = _build_challan_detail(db, challan)
+    party = db.get(Party, challan.party_id)
+    branch = db.get(Branch, challan.branch_id)
+
+    # Escaped -- party/branch names and colour_name are free-text tenant
+    # data, not trusted markup (see Party/LotColour model docstrings).
+    rows_html = "".join(
+        "<tr><td>{lot}</td><td>{colour}</td><td>{unit}</td><td>{qty}</td></tr>".format(
+            lot=html_escape.escape(line.lot_number),
+            colour=html_escape.escape(line.colour_name),
+            unit=UNIT_TYPE_LABELS.get(line.unit_type, line.unit_type),
+            qty=line.quantity,
+        )
+        for line in detail.lines
+    )
+    total_quantity = sum(line.quantity for line in detail.lines)
+    notes_html = (
+        f"<div><strong>Notes:</strong> {html_escape.escape(challan.notes)}</div>" if challan.notes else ""
+    )
+
+    html_doc = CHALLAN_PDF_TEMPLATE.format(
+        challan_number=html_escape.escape(challan.challan_number),
+        delivery_date=challan.delivery_date.isoformat(),
+        party_name=html_escape.escape(party.name),
+        branch_name=html_escape.escape(branch.name),
+        notes_html=notes_html,
+        rows=rows_html,
+        total_quantity=total_quantity,
+    )
+    pdf_bytes = html_to_pdf(html_doc)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{challan.challan_number}.pdf"'},
+    )

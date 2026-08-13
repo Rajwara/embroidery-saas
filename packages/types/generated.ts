@@ -3135,3 +3135,27 @@ export const getDeliveryChallan = async (challanId: string, options?: RequestIni
     
   }
 );}
+
+
+
+/**
+ * @summary Get Delivery Challan Pdf
+ */
+export const getGetDeliveryChallanPdfUrl = (challanId: string,) => {
+
+
+  
+
+  return `/delivery-challans/${challanId}/pdf`
+}
+
+export const getDeliveryChallanPdf = async (challanId: string, options?: RequestInit): Promise<unknown> => {
+  
+  return apiMutator<unknown>(getGetDeliveryChallanPdfUrl(challanId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
