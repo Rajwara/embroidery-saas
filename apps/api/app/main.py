@@ -21,6 +21,7 @@ from app.routers import (
     production_jobs,
     purchase_required,
     purchases,
+    reports,
     roles,
     suppliers,
 )
@@ -63,3 +64,4 @@ app.include_router(purchases.router, prefix="/purchases", tags=["purchases"])
 app.include_router(expenses.router, prefix="/expenses", tags=["expenses"])
 app.include_router(inventory.router, prefix="/inventory-items", tags=["inventory"])
 app.include_router(purchase_required.router, prefix="/purchase-required", tags=["purchase-required"])
+app.include_router(reports.router, tags=["reports"])

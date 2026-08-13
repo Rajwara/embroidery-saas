@@ -907,6 +907,30 @@ export interface MachineAllocationInput {
   quantity?: MachineAllocationInputQuantity;
 }
 
+export type MachineCostReportOutBranchId = string | null;
+
+export interface MachineCostReportOut {
+  date_from: string;
+  date_to: string;
+  branch_id: MachineCostReportOutBranchId;
+  total_overhead: number;
+  active_machine_count: number;
+  machines: MachineCostRowOut[];
+}
+
+export type MachineCostRowOutMachineName = string | null;
+
+export type MachineCostRowOutCostPerUnit = number | null;
+
+export interface MachineCostRowOut {
+  machine_id: string;
+  machine_code: string;
+  machine_name: MachineCostRowOutMachineName;
+  quantity_produced: number;
+  overhead_share: number;
+  cost_per_unit: MachineCostRowOutCostPerUnit;
+}
+
 export type MachineCreateRequestName = string | null;
 
 export type MachineCreateRequestMachineType = string | null;
@@ -1986,6 +2010,12 @@ skip?: number;
 limit?: number;
 status?: string | null;
 open_only?: boolean;
+};
+
+export type GetMachineCostReportParams = {
+date_from: string;
+date_to: string;
+branch_id?: string | null;
 };
 
 /**
@@ -4945,5 +4975,36 @@ export const advancePurchaseRequired = async (requestId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       advancePurchaseRequiredRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Machine Cost Report
+ */
+export const getGetMachineCostReportUrl = (params: GetMachineCostReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/reports/machines/cost?${stringifiedParams}` : `/reports/machines/cost`
+}
+
+export const getMachineCostReport = async (params: GetMachineCostReportParams, options?: RequestInit): Promise<MachineCostReportOut> => {
+  
+  return apiMutator<MachineCostReportOut>(getGetMachineCostReportUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
   }
 );}
