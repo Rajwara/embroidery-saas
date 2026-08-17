@@ -9,7 +9,7 @@ from app.audit import client_meta
 from app.db import get_db, set_tenant_context
 from app.dependencies import get_current_user
 from app.email import send_password_reset_email
-from app.models import LoginHistory, PasswordResetToken, User
+from app.models import Factory, LoginHistory, PasswordResetToken, User
 from app.schemas.auth import (
     AccessTokenResponse,
     ForgotPasswordRequest,
@@ -162,7 +162,14 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
         )
         db.commit()
         reset_url = f"/reset-password?token={raw_token}"
-        send_password_reset_email(user_email, reset_url)
+        factory = db.query(Factory).first()
+        send_password_reset_email(
+            user_email,
+            reset_url,
+            from_name=factory.notification_from_name if factory else None,
+            from_email=factory.notification_from_email if factory else None,
+            reply_to=factory.notification_reply_to_email if factory else None,
+        )
 
     return {"detail": "if_account_exists_email_sent"}
 

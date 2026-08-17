@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_internal_secret, require_permission
-from app.models import ScheduledReportSetting, Tenant, User
+from app.models import Factory, ScheduledReportSetting, Tenant, User
 from app.models.scheduled_report_setting import FREQUENCIES, REPORT_TYPES
 from app.pdf import html_to_pdf
 from app.routers.reports import compute_financial_summary
@@ -251,6 +251,9 @@ def internal_list_due_scheduled_reports(
     for tenant in db.query(Tenant).all():
         set_tenant_context(db, str(tenant.id))
         settings_rows = db.query(ScheduledReportSetting).filter(ScheduledReportSetting.is_active.is_(True)).all()
+        if not settings_rows:
+            continue
+        factory = db.query(Factory).first()
         for setting in settings_rows:
             if _is_due(setting, today):
                 due.append(
@@ -259,6 +262,9 @@ def internal_list_due_scheduled_reports(
                         tenant_id=tenant.id,
                         report_type=setting.report_type,
                         recipient_email=setting.recipient_email,
+                        from_name=factory.notification_from_name if factory else "Embroidery SaaS",
+                        from_email=factory.notification_from_email if factory else "onboarding@resend.dev",
+                        reply_to_email=factory.notification_reply_to_email if factory else None,
                     )
                 )
     return due

@@ -313,6 +313,8 @@ export interface DesignVariantUpdateRequest {
   stitch_count?: DesignVariantUpdateRequestStitchCount;
 }
 
+export type DueScheduledReportOutReplyToEmail = string | null;
+
 /**
  * Internal-only -- what the worker needs to fetch the PDF and send the
 email for one due setting. tenant_id lets the worker's log/error
@@ -325,6 +327,9 @@ export interface DueScheduledReportOut {
   tenant_id: string;
   report_type: string;
   recipient_email: string;
+  from_name: string;
+  from_email: string;
+  reply_to_email: DueScheduledReportOutReplyToEmail;
 }
 
 export interface EffectivePermissionsResponse {
@@ -538,6 +543,8 @@ export type FactoryOutTaxId = string | null;
 
 export type FactoryOutLogoUrl = string | null;
 
+export type FactoryOutNotificationReplyToEmail = string | null;
+
 export interface FactoryOut {
   id: string;
   name: string;
@@ -567,6 +574,9 @@ export interface FactoryOut {
   next_payment_number: number;
   next_purchase_number: number;
   next_expense_number: number;
+  notification_from_name: string;
+  notification_from_email: string;
+  notification_reply_to_email: FactoryOutNotificationReplyToEmail;
 }
 
 export type FactoryUpdateRequestName = string | null;
@@ -611,6 +621,12 @@ export type FactoryUpdateRequestPurchaseNumberPrefix = string | null;
 
 export type FactoryUpdateRequestExpenseNumberPrefix = string | null;
 
+export type FactoryUpdateRequestNotificationFromName = string | null;
+
+export type FactoryUpdateRequestNotificationFromEmail = string | null;
+
+export type FactoryUpdateRequestNotificationReplyToEmail = string | null;
+
 export interface FactoryUpdateRequest {
   name?: FactoryUpdateRequestName;
   legal_name?: FactoryUpdateRequestLegalName;
@@ -633,6 +649,9 @@ export interface FactoryUpdateRequest {
   payment_number_prefix?: FactoryUpdateRequestPaymentNumberPrefix;
   purchase_number_prefix?: FactoryUpdateRequestPurchaseNumberPrefix;
   expense_number_prefix?: FactoryUpdateRequestExpenseNumberPrefix;
+  notification_from_name?: FactoryUpdateRequestNotificationFromName;
+  notification_from_email?: FactoryUpdateRequestNotificationFromEmail;
+  notification_reply_to_email?: FactoryUpdateRequestNotificationReplyToEmail;
 }
 
 export type FinancialSummaryReportOutBranchId = string | null;

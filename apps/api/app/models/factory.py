@@ -59,3 +59,15 @@ class Factory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     payment_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="PMT")
     purchase_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="PUR")
     expense_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="EXP")
+
+    # Settings > Notifications. Every outbound system email (password reset,
+    # invite, scheduled report delivery) reads its "From" header from here
+    # instead of the constant that used to be hardcoded and duplicated in
+    # app/email.py and apps/worker/tasks.py.
+    notification_from_name: Mapped[str] = mapped_column(String(255), nullable=False, default="Embroidery SaaS")
+    notification_from_email: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="onboarding@resend.dev"
+    )
+    # Optional -- Resend omits reply-to entirely when unset, so replies go
+    # nowhere by default rather than to a hardcoded address no one reads.
+    notification_reply_to_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

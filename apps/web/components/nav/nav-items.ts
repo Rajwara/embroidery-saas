@@ -29,6 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Machines", href: "/machines", requiredPermission: "machines.view" },
   { label: "Employees", href: "/employees", requiredPermission: "employees.view" },
   { label: "Company Profile", href: "/settings/company", requiredPermission: "factories.edit" },
+  { label: "Notification Settings", href: "/settings/notifications", requiredPermission: "factories.edit" },
   { label: "Users", href: "/settings/users", requiredPermission: "users.view" },
   { label: "Roles & Permissions", href: "/settings/roles", requiredPermission: "roles.view" },
   { label: "Security", href: "/settings/security", requiredPermission: null },

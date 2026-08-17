@@ -43,6 +43,9 @@ class FactoryUpdateRequest(BaseModel):
     payment_number_prefix: str | None = None
     purchase_number_prefix: str | None = None
     expense_number_prefix: str | None = None
+    notification_from_name: str | None = None
+    notification_from_email: str | None = None
+    notification_reply_to_email: str | None = None
 
 
 class FactoryOut(BaseModel):
@@ -74,5 +77,8 @@ class FactoryOut(BaseModel):
     next_payment_number: int
     next_purchase_number: int
     next_expense_number: int
+    notification_from_name: str
+    notification_from_email: str
+    notification_reply_to_email: str | None
 
     model_config = {"from_attributes": True}

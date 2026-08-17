@@ -40,3 +40,6 @@ class DueScheduledReportOut(BaseModel):
     tenant_id: uuid.UUID
     report_type: str
     recipient_email: str
+    from_name: str
+    from_email: str
+    reply_to_email: str | None

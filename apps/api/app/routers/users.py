@@ -107,7 +107,14 @@ def invite_user(
     factory = db.query(Factory).first()
     factory_name = factory.name if factory else "Embroidery SaaS"
     invite_url = f"/reset-password?token={raw_token}"
-    send_invite_email(payload.email, invite_url, factory_name)
+    send_invite_email(
+        payload.email,
+        invite_url,
+        factory_name,
+        from_name=factory.notification_from_name if factory else None,
+        from_email=factory.notification_from_email if factory else None,
+        reply_to=factory.notification_reply_to_email if factory else None,
+    )
 
     return new_user
 

@@ -12,7 +12,9 @@ API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
 INTERNAL_API_SECRET = os.environ.get("INTERNAL_API_SECRET", "change-me-in-every-environment")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 
-FROM_ADDRESS = "Embroidery SaaS <onboarding@resend.dev>"
+# Fallback only -- each due setting carries its own tenant's Factory
+# notification config (Settings > Notifications); see _send_report_email.
+DEFAULT_FROM_ADDRESS = "Embroidery SaaS <onboarding@resend.dev>"
 
 REPORT_TITLES = {
     "financial_summary": "Financial Summary",
@@ -62,7 +64,14 @@ def send_scheduled_reports() -> dict:
                 pdf_response.raise_for_status()
                 pdf_bytes = pdf_response.content
 
-                _send_report_email(recipient_email, report_type, pdf_bytes)
+                _send_report_email(
+                    recipient_email,
+                    report_type,
+                    pdf_bytes,
+                    from_name=setting["from_name"],
+                    from_email=setting["from_email"],
+                    reply_to_email=setting["reply_to_email"],
+                )
 
                 mark_sent_response = client.post(
                     f"/internal/scheduled-reports/{setting_id}/mark-sent", params={"tenant_id": tenant_id}
@@ -78,25 +87,35 @@ def send_scheduled_reports() -> dict:
     return {"sent": sent_count, "failed": failed_count}
 
 
-def _send_report_email(to_email: str, report_type: str, pdf_bytes: bytes) -> None:
+def _send_report_email(
+    to_email: str,
+    report_type: str,
+    pdf_bytes: bytes,
+    from_name: str | None = None,
+    from_email: str | None = None,
+    reply_to_email: str | None = None,
+) -> None:
     title = REPORT_TITLES.get(report_type, report_type)
 
     if not RESEND_API_KEY:
         logger.warning("RESEND_API_KEY unset; skipping scheduled report email to %s (%s)", to_email, title)
         return
 
+    from_address = f"{from_name} <{from_email}>" if from_name and from_email else DEFAULT_FROM_ADDRESS
+    payload = {
+        "from": from_address,
+        "to": [to_email],
+        "subject": f"Your scheduled report: {title}",
+        "html": f"<p>Your {title} report is attached.</p>",
+        "attachments": [
+            {
+                "filename": f"{report_type}.pdf",
+                "content": list(pdf_bytes),
+            }
+        ],
+    }
+    if reply_to_email:
+        payload["reply_to"] = reply_to_email
+
     resend.api_key = RESEND_API_KEY
-    resend.Emails.send(
-        {
-            "from": FROM_ADDRESS,
-            "to": [to_email],
-            "subject": f"Your scheduled report: {title}",
-            "html": f"<p>Your {title} report is attached.</p>",
-            "attachments": [
-                {
-                    "filename": f"{report_type}.pdf",
-                    "content": list(pdf_bytes),
-                }
-            ],
-        }
-    )
+    resend.Emails.send(payload)
