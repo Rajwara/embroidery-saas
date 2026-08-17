@@ -48,3 +48,14 @@ class Factory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # Same pattern, for Expense.expense_number (e.g. "EXP-000001") -- see
     # routers/expenses.py.
     next_expense_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    # Prefixes are editable (Settings > Company Profile); the counters above
+    # are not -- resetting a counter risks reusing a number already issued,
+    # so only the prefix half of "LOT-000001" is configurable. Each router
+    # reads its prefix from here instead of a hardcoded literal.
+    lot_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="LOT")
+    challan_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="CH")
+    invoice_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="INV")
+    payment_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="PMT")
+    purchase_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="PUR")
+    expense_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="EXP")

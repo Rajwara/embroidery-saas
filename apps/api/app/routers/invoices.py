@@ -183,7 +183,7 @@ def create_invoice(
     factory = db.query(Factory).with_for_update().first()
     if factory is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="factory_not_found")
-    invoice_number = f"INV-{factory.next_invoice_number:06d}"
+    invoice_number = f"{factory.invoice_number_prefix}-{factory.next_invoice_number:06d}"
     factory.next_invoice_number += 1
 
     invoice = Invoice(

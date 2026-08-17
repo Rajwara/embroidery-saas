@@ -102,7 +102,7 @@ def create_purchase(
     factory = db.query(Factory).with_for_update().first()
     if factory is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="factory_not_found")
-    purchase_number = f"PUR-{factory.next_purchase_number:06d}"
+    purchase_number = f"{factory.purchase_number_prefix}-{factory.next_purchase_number:06d}"
     factory.next_purchase_number += 1
 
     purchase = Purchase(

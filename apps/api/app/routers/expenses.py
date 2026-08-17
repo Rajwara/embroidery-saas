@@ -48,7 +48,7 @@ def create_expense(
     factory = db.query(Factory).with_for_update().first()
     if factory is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="factory_not_found")
-    expense_number = f"EXP-{factory.next_expense_number:06d}"
+    expense_number = f"{factory.expense_number_prefix}-{factory.next_expense_number:06d}"
     factory.next_expense_number += 1
 
     expense = Expense(

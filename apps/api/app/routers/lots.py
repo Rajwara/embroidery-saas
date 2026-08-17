@@ -85,7 +85,7 @@ def create_lot(
     if factory is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="factory_not_found")
 
-    lot_number = f"LOT-{factory.next_lot_number:06d}"
+    lot_number = f"{factory.lot_number_prefix}-{factory.next_lot_number:06d}"
     factory.next_lot_number += 1
 
     lot = Lot(

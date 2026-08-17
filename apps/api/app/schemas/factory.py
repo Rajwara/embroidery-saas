@@ -37,6 +37,12 @@ class FactoryUpdateRequest(BaseModel):
     currency: str | None = None
     fiscal_year_start_month: int | None = None
     is_active: bool | None = None
+    lot_number_prefix: str | None = None
+    challan_number_prefix: str | None = None
+    invoice_number_prefix: str | None = None
+    payment_number_prefix: str | None = None
+    purchase_number_prefix: str | None = None
+    expense_number_prefix: str | None = None
 
 
 class FactoryOut(BaseModel):
@@ -56,5 +62,17 @@ class FactoryOut(BaseModel):
     currency: str
     fiscal_year_start_month: int
     is_active: bool
+    lot_number_prefix: str
+    challan_number_prefix: str
+    invoice_number_prefix: str
+    payment_number_prefix: str
+    purchase_number_prefix: str
+    expense_number_prefix: str
+    next_lot_number: int
+    next_challan_number: int
+    next_invoice_number: int
+    next_payment_number: int
+    next_purchase_number: int
+    next_expense_number: int
 
     model_config = {"from_attributes": True}

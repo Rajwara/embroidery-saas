@@ -166,7 +166,7 @@ def create_payment(
     factory = db.query(Factory).with_for_update().first()
     if factory is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="factory_not_found")
-    payment_number = f"PMT-{factory.next_payment_number:06d}"
+    payment_number = f"{factory.payment_number_prefix}-{factory.next_payment_number:06d}"
     factory.next_payment_number += 1
 
     payment = Payment(

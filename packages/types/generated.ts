@@ -555,6 +555,18 @@ export interface FactoryOut {
   currency: string;
   fiscal_year_start_month: number;
   is_active: boolean;
+  lot_number_prefix: string;
+  challan_number_prefix: string;
+  invoice_number_prefix: string;
+  payment_number_prefix: string;
+  purchase_number_prefix: string;
+  expense_number_prefix: string;
+  next_lot_number: number;
+  next_challan_number: number;
+  next_invoice_number: number;
+  next_payment_number: number;
+  next_purchase_number: number;
+  next_expense_number: number;
 }
 
 export type FactoryUpdateRequestName = string | null;
@@ -587,6 +599,18 @@ export type FactoryUpdateRequestFiscalYearStartMonth = number | null;
 
 export type FactoryUpdateRequestIsActive = boolean | null;
 
+export type FactoryUpdateRequestLotNumberPrefix = string | null;
+
+export type FactoryUpdateRequestChallanNumberPrefix = string | null;
+
+export type FactoryUpdateRequestInvoiceNumberPrefix = string | null;
+
+export type FactoryUpdateRequestPaymentNumberPrefix = string | null;
+
+export type FactoryUpdateRequestPurchaseNumberPrefix = string | null;
+
+export type FactoryUpdateRequestExpenseNumberPrefix = string | null;
+
 export interface FactoryUpdateRequest {
   name?: FactoryUpdateRequestName;
   legal_name?: FactoryUpdateRequestLegalName;
@@ -603,6 +627,12 @@ export interface FactoryUpdateRequest {
   currency?: FactoryUpdateRequestCurrency;
   fiscal_year_start_month?: FactoryUpdateRequestFiscalYearStartMonth;
   is_active?: FactoryUpdateRequestIsActive;
+  lot_number_prefix?: FactoryUpdateRequestLotNumberPrefix;
+  challan_number_prefix?: FactoryUpdateRequestChallanNumberPrefix;
+  invoice_number_prefix?: FactoryUpdateRequestInvoiceNumberPrefix;
+  payment_number_prefix?: FactoryUpdateRequestPaymentNumberPrefix;
+  purchase_number_prefix?: FactoryUpdateRequestPurchaseNumberPrefix;
+  expense_number_prefix?: FactoryUpdateRequestExpenseNumberPrefix;
 }
 
 export type FinancialSummaryReportOutBranchId = string | null;
@@ -1835,6 +1865,21 @@ export interface TotpVerifyRequest {
   code: string;
 }
 
+export interface UserInviteRequest {
+  email: string;
+  full_name: string;
+  role_ids?: string[];
+}
+
+export interface UserOut {
+  id: string;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  is_super_admin: boolean;
+  roles: UserRoleOut[];
+}
+
 export interface UserProfileResponse {
   id: string;
   tenant_id: string;
@@ -1843,6 +1888,20 @@ export interface UserProfileResponse {
   is_super_admin: boolean;
   is_platform_admin: boolean;
   mfa_enabled: boolean;
+}
+
+export interface UserRoleOut {
+  id: string;
+  name: string;
+}
+
+export type UserUpdateRequestFullName = string | null;
+
+export type UserUpdateRequestIsActive = boolean | null;
+
+export interface UserUpdateRequest {
+  full_name?: UserUpdateRequestFullName;
+  is_active?: UserUpdateRequestIsActive;
 }
 
 export type ValidationErrorLocItem = string | number;
@@ -5475,5 +5534,80 @@ export const internalMarkScheduledReportSent = async (settingId: string,
     method: 'POST'
     
     
+  }
+);}
+
+
+
+/**
+ * @summary List Users
+ */
+export const getListUsersUrl = () => {
+
+
+  
+
+  return `/users`
+}
+
+export const listUsers = async ( options?: RequestInit): Promise<UserOut[]> => {
+  
+  return apiMutator<UserOut[]>(getListUsersUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Invite User
+ */
+export const getInviteUserUrl = () => {
+
+
+  
+
+  return `/users`
+}
+
+export const inviteUser = async (userInviteRequest: UserInviteRequest, options?: RequestInit): Promise<UserOut> => {
+  
+  return apiMutator<UserOut>(getInviteUserUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      userInviteRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Update User
+ */
+export const getUpdateUserUrl = (userId: string,) => {
+
+
+  
+
+  return `/users/${userId}`
+}
+
+export const updateUser = async (userId: string,
+    userUpdateRequest: UserUpdateRequest, options?: RequestInit): Promise<UserOut> => {
+  
+  return apiMutator<UserOut>(getUpdateUserUrl(userId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      userUpdateRequest,)
   }
 );}

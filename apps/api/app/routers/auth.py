@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.audit import client_meta
 from app.db import get_db, set_tenant_context
-from app.dependencies import get_current_super_admin, get_current_user
+from app.dependencies import get_current_user
 from app.email import send_password_reset_email
 from app.models import LoginHistory, PasswordResetToken, User
 from app.schemas.auth import (
@@ -94,7 +94,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="inactive_account")
 
     mfa_used = False
-    if user.is_super_admin and user.mfa_secret:
+    if user.mfa_secret:
         if not payload.totp_code:
             _record_login_attempt(
                 db, email=payload.email, success=False, tenant_id=user.tenant_id, user_id=user.id,
@@ -192,8 +192,11 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
 
 
 @router.post("/2fa/setup", response_model=TotpSetupResponse, operation_id="setupTotp")
-def setup_totp(user: User = Depends(get_current_super_admin)) -> TotpSetupResponse:
+def setup_totp(user: User = Depends(get_current_user)) -> TotpSetupResponse:
     # Not persisted here -- avoids a half-configured MFA state if the user never confirms.
+    # Available to every authenticated user, not just super admins (Phase 5 decision,
+    # see project_platform_admin_architecture memory context): a Factory Manager or
+    # Accountant account touches just as much sensitive data as the super admin.
     secret = generate_totp_secret()
     return TotpSetupResponse(secret=secret, provisioning_uri=totp_provisioning_uri(secret, user.email))
 
@@ -201,7 +204,7 @@ def setup_totp(user: User = Depends(get_current_super_admin)) -> TotpSetupRespon
 @router.post("/2fa/verify", status_code=status.HTTP_200_OK, operation_id="verifyTotp")
 def verify_totp(
     payload: TotpVerifyRequest,
-    user: User = Depends(get_current_super_admin),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     if not verify_totp_code(payload.secret, payload.code):
@@ -216,7 +219,7 @@ def verify_totp(
 @router.post("/2fa/disable", status_code=status.HTTP_200_OK, operation_id="disableTotp")
 def disable_totp(
     payload: TotpDisableRequest,
-    user: User = Depends(get_current_super_admin),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     if not verify_password(payload.password, user.hashed_password):

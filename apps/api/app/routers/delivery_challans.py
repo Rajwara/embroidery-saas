@@ -235,7 +235,7 @@ def create_delivery_challan(
     factory = db.query(Factory).with_for_update().first()
     if factory is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="factory_not_found")
-    challan_number = f"CH-{factory.next_challan_number:06d}"
+    challan_number = f"{factory.challan_number_prefix}-{factory.next_challan_number:06d}"
     factory.next_challan_number += 1
 
     challan = DeliveryChallan(
