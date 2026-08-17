@@ -51,6 +51,15 @@ def get_current_super_admin(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+def get_current_platform_admin(user: User = Depends(get_current_user)) -> User:
+    """Gates the Platform Super Admin portal (routers/platform.py). Deliberately
+    separate from get_current_super_admin -- is_platform_admin is the
+    cross-tenant SaaS-admin concern described above, not an in-tenant role."""
+    if not user.is_platform_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="platform_admin_required")
+    return user
+
+
 def require_permission(code: str):
     """FastAPI dependency factory for gating routes on a permission code
     (e.g. Depends(require_permission("parties.create"))). is_super_admin

@@ -35,6 +35,11 @@ def run() -> None:
             hashed_password=hash_password("changeme123"),
             full_name="Demo Super Admin",
             is_super_admin=True,
+            # Local-dev-only convenience so the Platform Super Admin portal
+            # (routers/platform.py) has an account to log into without a
+            # separate seed script -- does not imply anything about which
+            # account holds this flag in production.
+            is_platform_admin=True,
         )
         db.add(admin)
 

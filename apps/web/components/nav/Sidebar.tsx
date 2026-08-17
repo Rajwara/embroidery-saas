@@ -10,7 +10,7 @@ import { NAV_ITEMS } from "./nav-items";
 import { NavLink } from "./NavLink";
 
 export function Sidebar() {
-  const { hasPermission, user, logout } = useAuth();
+  const { hasPermission, user, isPlatformAdmin, logout } = useAuth();
   const [openPurchaseRequiredCount, setOpenPurchaseRequiredCount] = useState(0);
 
   const visibleItems = NAV_ITEMS.filter((item) => hasPermission(item.requiredPermission));
@@ -41,6 +41,14 @@ export function Sidebar() {
         </nav>
       </div>
       <div className="space-y-2 px-2">
+        {isPlatformAdmin && (
+          <a
+            href="/platform/dashboard"
+            className="block rounded px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+          >
+            Platform Admin
+          </a>
+        )}
         {user && <div className="truncate text-xs text-gray-500">{user.email}</div>}
         <button
           onClick={logout}

@@ -1439,6 +1439,18 @@ export interface PermissionOverrideRequest {
   effect?: PermissionOverrideRequestEffect;
 }
 
+export type PlatformDashboardOutPlanBreakdown = {[key: string]: number};
+
+export type PlatformDashboardOutStatusBreakdown = {[key: string]: number};
+
+export interface PlatformDashboardOut {
+  total_factories: number;
+  active_factories: number;
+  plan_breakdown: PlatformDashboardOutPlanBreakdown;
+  status_breakdown: PlatformDashboardOutStatusBreakdown;
+  total_users: number;
+}
+
 export interface ProductionByComponentRowOut {
   component_type: string;
   quantity: number;
@@ -1739,6 +1751,34 @@ export interface StockTransactionOut {
   notes: StockTransactionOutNotes;
 }
 
+export type SubscriberFactoryOutSubscriptionRenewsAt = string | null;
+
+export interface SubscriberFactoryOut {
+  id: string;
+  name: string;
+  is_active: boolean;
+  subscription_plan: string;
+  subscription_status: string;
+  subscription_renews_at: SubscriberFactoryOutSubscriptionRenewsAt;
+  user_count: number;
+  created_at: string;
+}
+
+export type SubscriberFactoryUpdateRequestIsActive = boolean | null;
+
+export type SubscriberFactoryUpdateRequestSubscriptionPlan = string | null;
+
+export type SubscriberFactoryUpdateRequestSubscriptionStatus = string | null;
+
+export type SubscriberFactoryUpdateRequestSubscriptionRenewsAt = string | null;
+
+export interface SubscriberFactoryUpdateRequest {
+  is_active?: SubscriberFactoryUpdateRequestIsActive;
+  subscription_plan?: SubscriberFactoryUpdateRequestSubscriptionPlan;
+  subscription_status?: SubscriberFactoryUpdateRequestSubscriptionStatus;
+  subscription_renews_at?: SubscriberFactoryUpdateRequestSubscriptionRenewsAt;
+}
+
 export type SubscriptionOutRenewsAt = string | null;
 
 export interface SubscriptionOut {
@@ -1891,6 +1931,18 @@ export interface TotpSetupResponse {
 export interface TotpVerifyRequest {
   secret: string;
   code: string;
+}
+
+export interface TrialAccountCreateRequest {
+  factory_name: string;
+  admin_email: string;
+  admin_full_name: string;
+}
+
+export interface TrialAccountOut {
+  tenant_id: string;
+  tenant_name: string;
+  admin_email: string;
 }
 
 export interface UserInviteRequest {
@@ -5661,5 +5713,104 @@ export const getSubscription = async ( options?: RequestInit): Promise<Subscript
     method: 'GET'
     
     
+  }
+);}
+
+
+
+/**
+ * @summary Get Platform Dashboard
+ */
+export const getGetPlatformDashboardUrl = () => {
+
+
+  
+
+  return `/platform/dashboard`
+}
+
+export const getPlatformDashboard = async ( options?: RequestInit): Promise<PlatformDashboardOut> => {
+  
+  return apiMutator<PlatformDashboardOut>(getGetPlatformDashboardUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Subscriber Factories
+ */
+export const getListSubscriberFactoriesUrl = () => {
+
+
+  
+
+  return `/platform/factories`
+}
+
+export const listSubscriberFactories = async ( options?: RequestInit): Promise<SubscriberFactoryOut[]> => {
+  
+  return apiMutator<SubscriberFactoryOut[]>(getListSubscriberFactoriesUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Update Subscriber Factory
+ */
+export const getUpdateSubscriberFactoryUrl = (tenantId: string,) => {
+
+
+  
+
+  return `/platform/factories/${tenantId}`
+}
+
+export const updateSubscriberFactory = async (tenantId: string,
+    subscriberFactoryUpdateRequest: SubscriberFactoryUpdateRequest, options?: RequestInit): Promise<SubscriberFactoryOut> => {
+  
+  return apiMutator<SubscriberFactoryOut>(getUpdateSubscriberFactoryUrl(tenantId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      subscriberFactoryUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Create Trial Account
+ */
+export const getCreateTrialAccountUrl = () => {
+
+
+  
+
+  return `/platform/trial-accounts`
+}
+
+export const createTrialAccount = async (trialAccountCreateRequest: TrialAccountCreateRequest, options?: RequestInit): Promise<TrialAccountOut> => {
+  
+  return apiMutator<TrialAccountOut>(getCreateTrialAccountUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      trialAccountCreateRequest,)
   }
 );}

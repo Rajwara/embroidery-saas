@@ -17,6 +17,7 @@ from app.routers import (
     parties,
     payments,
     payroll,
+    platform,
     production_entries,
     production_jobs,
     purchase_required,
@@ -71,3 +72,4 @@ app.include_router(reports.router, tags=["reports"])
 app.include_router(scheduled_reports.router, tags=["scheduled-reports"])
 app.include_router(users.router, tags=["users"])
 app.include_router(subscription.router, tags=["subscription"])
+app.include_router(platform.router, tags=["platform"])

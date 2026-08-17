@@ -15,6 +15,7 @@ interface AuthContextValue {
   user: UserProfileResponse | null;
   permissions: string[];
   isSuperAdmin: boolean;
+  isPlatformAdmin: boolean;
   hasPermission: (code: string | null) => boolean;
   login: (email: string, password: string, totpCode?: string) => Promise<void>;
   logout: () => void;
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     permissions,
     isSuperAdmin: user?.is_super_admin ?? false,
+    isPlatformAdmin: user?.is_platform_admin ?? false,
     hasPermission: (code) => hasPermission(permissions, user?.is_super_admin ?? false, code),
     login,
     logout,
