@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.middleware import BodySizeLimitMiddleware
 from app.routers import (
     auth,
     branches,
@@ -31,6 +32,7 @@ from app.routers import (
 )
 
 settings = get_settings()
+settings.validate_production_secrets()
 
 app = FastAPI(title="Embroidery Factory Management SaaS API")
 
@@ -41,6 +43,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(BodySizeLimitMiddleware)
 
 
 @app.get("/health")

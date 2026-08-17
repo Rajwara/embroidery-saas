@@ -10,6 +10,7 @@ from app.db import get_db, set_tenant_context
 from app.dependencies import get_current_user
 from app.email import send_password_reset_email
 from app.models import Factory, LoginHistory, PasswordResetToken, User
+from app.rate_limit import rate_limit
 from app.schemas.auth import (
     AccessTokenResponse,
     ForgotPasswordRequest,
@@ -68,7 +69,12 @@ def _record_login_attempt(
 
 
 @router.post("/login", response_model=TokenResponse, operation_id="login")
-def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
+def login(
+    payload: LoginRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rl: None = Depends(rate_limit("login", max_requests=10, window_seconds=60)),
+) -> TokenResponse:
     ip_address, user_agent = client_meta(request)
 
     user = db.query(User).filter(User.email == payload.email).first()
@@ -145,7 +151,11 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> AccessTok
 
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK, operation_id="forgotPassword")
-def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)) -> dict:
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+    _rl: None = Depends(rate_limit("forgot_password", max_requests=5, window_seconds=60)),
+) -> dict:
     # Always return 200 regardless of whether the email exists -- no user enumeration.
     user = db.query(User).filter(User.email == payload.email).first()
     if user is not None:

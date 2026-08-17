@@ -31,6 +31,27 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
+    def validate_production_secrets(self) -> None:
+        """Fails startup loudly instead of silently serving with a
+        known-public default secret. Added after finding INTERNAL_API_SECRET
+        unset (and therefore defaulted) in production for an unknown period
+        -- see project_railway_release_step_broken memory context. jwt_secret
+        and internal_api_secret's defaults are both literal strings visible
+        in this file in the public repo, so leaving either unset outside
+        local dev is a real, exploitable gap, not just bad hygiene."""
+        if self.environment == "local":
+            return
+        insecure_defaults = {
+            "jwt_secret": "change-me",
+            "internal_api_secret": "change-me-in-every-environment",
+        }
+        offending = [name for name, default in insecure_defaults.items() if getattr(self, name) == default]
+        if offending:
+            raise RuntimeError(
+                f"Refusing to start with default value(s) for {', '.join(offending)} "
+                f"in environment '{self.environment}'. Set real secrets via env vars."
+            )
+
 
 @lru_cache
 def get_settings() -> Settings:
