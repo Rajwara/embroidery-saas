@@ -24,6 +24,7 @@ from app.routers import (
     reports,
     roles,
     scheduled_reports,
+    subscription,
     suppliers,
     users,
 )
@@ -69,3 +70,4 @@ app.include_router(purchase_required.router, prefix="/purchase-required", tags=[
 app.include_router(reports.router, tags=["reports"])
 app.include_router(scheduled_reports.router, tags=["scheduled-reports"])
 app.include_router(users.router, tags=["users"])
+app.include_router(subscription.router, tags=["subscription"])

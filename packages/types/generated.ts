@@ -1739,6 +1739,15 @@ export interface StockTransactionOut {
   notes: StockTransactionOutNotes;
 }
 
+export type SubscriptionOutRenewsAt = string | null;
+
+export interface SubscriptionOut {
+  tenant_name: string;
+  plan: string;
+  status: string;
+  renews_at: SubscriptionOutRenewsAt;
+}
+
 export type SupplierCreateRequestContactPerson = string | null;
 
 export type SupplierCreateRequestPhone = string | null;
@@ -5628,5 +5637,29 @@ export const updateUser = async (userId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       userUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Subscription
+ */
+export const getGetSubscriptionUrl = () => {
+
+
+  
+
+  return `/subscription`
+}
+
+export const getSubscription = async ( options?: RequestInit): Promise<SubscriptionOut> => {
+  
+  return apiMutator<SubscriptionOut>(getGetSubscriptionUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
   }
 );}

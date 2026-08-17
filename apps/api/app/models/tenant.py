@@ -6,8 +6,9 @@ tenant_id foreign key + an RLS policy in its migration.
 """
 
 import uuid
+from datetime import date, timedelta
 
-from sqlalchemy import Boolean, ForeignKey, String, Table, Column
+from sqlalchemy import Boolean, Date, ForeignKey, String, Table, Column
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +34,19 @@ class Tenant(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Factory-facing Subscription/Billing screen (Phase 5 item 6). Read-only
+    # in Stage 1 -- no payment processor, no self-serve plan change, no Plan
+    # catalog table yet. A tenant has exactly one subscription, so these
+    # live directly on Tenant rather than a separate table, same reasoning
+    # as Factory's own config fields. The Platform Super Admin's Subscription
+    # Plans/Billing management (item 7) is what will eventually write these;
+    # for now they're seed/manual-set defaults.
+    subscription_plan: Mapped[str] = mapped_column(String(50), nullable=False, default="trial")
+    subscription_status: Mapped[str] = mapped_column(String(50), nullable=False, default="trialing")
+    subscription_renews_at: Mapped[date | None] = mapped_column(
+        Date, nullable=True, default=lambda: date.today() + timedelta(days=30)
+    )
 
     users: Mapped[list["User"]] = relationship(back_populates="tenant")
 
