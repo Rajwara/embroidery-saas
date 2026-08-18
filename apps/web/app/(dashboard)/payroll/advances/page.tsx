@@ -3,11 +3,24 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
+import { AlertCircle, Loader2 } from "lucide-react";
+
 import { createAdvance, listAdvances, listEmployees } from "@embroidery/types";
 import type { AdvanceOut, EmployeeOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function AdvancesPage() {
   const { hasPermission } = useAuth();
@@ -70,69 +83,80 @@ export default function AdvancesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Advances</h1>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} />
           Open only
         </label>
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && advances === null && (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
         </div>
       )}
 
-      {!error && advances === null && <p className="text-sm text-gray-500">Loading advances...</p>}
-
       {!error && advances !== null && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Employee</th>
-              <th className="px-4 py-2 font-medium">Date</th>
-              <th className="px-4 py-2 font-medium">Amount</th>
-              <th className="px-4 py-2 font-medium">Remaining</th>
-              <th className="px-4 py-2 font-medium">Reason</th>
-            </tr>
-          </thead>
-          <tbody>
-            {advances.map((advance) => (
-              <tr key={advance.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">
-                  <Link href={`/payroll/advances/${advance.id}`} className="font-medium text-gray-900 underline">
-                    {advance.employee_name}
-                  </Link>
-                </td>
-                <td className="px-4 py-2">{advance.advance_date}</td>
-                <td className="px-4 py-2">{advance.amount.toFixed(2)}</td>
-                <td className="px-4 py-2">{advance.remaining_balance.toFixed(2)}</td>
-                <td className="px-4 py-2 text-gray-500">{advance.reason ?? "—"}</td>
-              </tr>
-            ))}
-            {advances.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
-                  No advances found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Remaining</TableHead>
+                <TableHead>Reason</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {advances.map((advance) => (
+                <TableRow key={advance.id}>
+                  <TableCell>
+                    <Link href={`/payroll/advances/${advance.id}`} className="font-medium text-foreground hover:underline">
+                      {advance.employee_name}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{advance.advance_date}</TableCell>
+                  <TableCell className="text-right tabular-nums">{advance.amount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{advance.remaining_balance.toFixed(2)}</TableCell>
+                  <TableCell className="text-muted-foreground">{advance.reason ?? "—"}</TableCell>
+                </TableRow>
+              ))}
+              {advances.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    No advances found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {hasPermission("payroll.create") && (
-        <form onSubmit={handleCreate} className="max-w-md space-y-4 rounded bg-white p-6 shadow">
+        <form onSubmit={handleCreate} className="max-w-md space-y-4 rounded-xl border bg-card p-6">
           <h2 className="text-sm font-semibold">Record advance</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Employee</label>
+            <label className="block text-sm font-medium text-muted-foreground">Employee</label>
             <select
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="" disabled>
                 Select an employee
@@ -146,17 +170,17 @@ export default function AdvancesPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Date</label>
+              <label className="block text-sm font-medium text-muted-foreground">Date</label>
               <input
                 type="date"
                 value={advanceDate}
                 onChange={(e) => setAdvanceDate(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Amount</label>
+              <label className="block text-sm font-medium text-muted-foreground">Amount</label>
               <input
                 type="number"
                 min={0}
@@ -164,30 +188,27 @@ export default function AdvancesPage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Reason</label>
+            <label className="block text-sm font-medium text-muted-foreground">Reason</label>
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
 
-          {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+          {submitError && <p className="text-sm text-destructive">{submitError}</p>}
 
-          <div className="flex justify-end border-t border-gray-100 pt-4">
-            <button
-              type="submit"
-              disabled={submitting || !employeeId || !amount}
-              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
+          <div className="flex justify-end border-t pt-4">
+            <Button type="submit" disabled={submitting || !employeeId || !amount}>
+              {submitting && <Loader2 className="animate-spin" />}
               {submitting ? "Recording..." : "Record advance"}
-            </button>
+            </Button>
           </div>
         </form>
       )}

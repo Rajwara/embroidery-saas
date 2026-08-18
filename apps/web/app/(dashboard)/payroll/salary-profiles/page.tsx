@@ -2,11 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { AlertCircle, Loader2 } from "lucide-react";
+
 import { createSalaryProfile, listEmployees, listSalaryProfiles, updateSalaryProfile } from "@embroidery/types";
 import type { EmployeeOut, EmployeeSalaryProfileOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function SalaryProfilesPage() {
   const { hasPermission } = useAuth();
@@ -93,95 +106,108 @@ export default function SalaryProfilesPage() {
       <h1 className="text-2xl font-semibold">Employee Salary Profiles</h1>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && profiles === null && (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
         </div>
       )}
 
-      {!error && profiles === null && <p className="text-sm text-gray-500">Loading salary profiles...</p>}
-
       {!error && profiles !== null && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Employee</th>
-              <th className="px-4 py-2 font-medium">Basic salary</th>
-              <th className="px-4 py-2 font-medium">Notes</th>
-              <th className="px-4 py-2 font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {profiles.map((profile) => (
-              <tr key={profile.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">{profile.employee_name}</td>
-                <td className="px-4 py-2">
-                  {editingId === profile.id ? (
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={editSalary}
-                      onChange={(e) => setEditSalary(e.target.value)}
-                      className="w-28 rounded border border-gray-300 px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    profile.basic_salary.toFixed(2)
-                  )}
-                </td>
-                <td className="px-4 py-2 text-gray-500">{profile.notes ?? "—"}</td>
-                <td className="px-4 py-2 text-right">
-                  {hasPermission("payroll.create") &&
-                    (editingId === profile.id ? (
-                      <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => saveEdit(profile.id)}
-                          disabled={editSaving}
-                          className="text-xs font-medium text-gray-900 underline disabled:opacity-40"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="text-xs font-medium text-gray-500 underline"
-                        >
-                          Cancel
-                        </button>
-                      </div>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Basic salary</TableHead>
+                <TableHead>Notes</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {profiles.map((profile) => (
+                <TableRow key={profile.id}>
+                  <TableCell className="font-medium">{profile.employee_name}</TableCell>
+                  <TableCell className="tabular-nums">
+                    {editingId === profile.id ? (
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={editSalary}
+                        onChange={(e) => setEditSalary(e.target.value)}
+                        className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                      />
                     ) : (
-                      <button
-                        onClick={() => startEdit(profile)}
-                        className="text-xs font-medium text-gray-700 underline"
-                      >
-                        Edit
-                      </button>
-                    ))}
-                </td>
-              </tr>
-            ))}
-            {profiles.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
-                  No salary profiles yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                      profile.basic_salary.toFixed(2)
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{profile.notes ?? "—"}</TableCell>
+                  <TableCell className="text-right">
+                    {hasPermission("payroll.create") &&
+                      (editingId === profile.id ? (
+                        <div className="flex justify-end gap-3">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0"
+                            onClick={() => saveEdit(profile.id)}
+                            disabled={editSaving}
+                          >
+                            {editSaving && <Loader2 className="animate-spin" />}
+                            Save
+                          </Button>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-muted-foreground"
+                            onClick={() => setEditingId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button variant="link" size="sm" className="h-auto p-0" onClick={() => startEdit(profile)}>
+                          Edit
+                        </Button>
+                      ))}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {profiles.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    No salary profiles yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {hasPermission("payroll.create") && (
-        <form onSubmit={handleCreate} className="max-w-md space-y-4 rounded bg-white p-6 shadow">
+        <form onSubmit={handleCreate} className="max-w-md space-y-4 rounded-xl border bg-card p-6">
           <h2 className="text-sm font-semibold">Add salary profile</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Employee</label>
+            <label className="block text-sm font-medium text-muted-foreground">Employee</label>
             <select
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="" disabled>
                 Select an employee
@@ -194,7 +220,7 @@ export default function SalaryProfilesPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Basic salary</label>
+            <label className="block text-sm font-medium text-muted-foreground">Basic salary</label>
             <input
               type="number"
               min={0}
@@ -202,29 +228,26 @@ export default function SalaryProfilesPage() {
               value={basicSalary}
               onChange={(e) => setBasicSalary(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Notes</label>
+            <label className="block text-sm font-medium text-muted-foreground">Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
 
-          {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+          {submitError && <p className="text-sm text-destructive">{submitError}</p>}
 
-          <div className="flex justify-end border-t border-gray-100 pt-4">
-            <button
-              type="submit"
-              disabled={submitting || !employeeId || !basicSalary}
-              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
+          <div className="flex justify-end border-t pt-4">
+            <Button type="submit" disabled={submitting || !employeeId || !basicSalary}>
+              {submitting && <Loader2 className="animate-spin" />}
               {submitting ? "Adding..." : "Add profile"}
-            </button>
+            </Button>
           </div>
         </form>
       )}

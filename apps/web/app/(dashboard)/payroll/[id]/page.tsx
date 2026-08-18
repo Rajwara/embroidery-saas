@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState, use } from "react";
 
+import { AlertCircle, Loader2 } from "lucide-react";
+
 import {
   addAdvanceInstallment,
   addBonus,
@@ -14,6 +16,17 @@ import type { AdvanceOut, PayrollEntryOut, PayrollRunDetailOut } from "@embroide
 
 import { ApiError, fetchPdfBlob } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import { StatusBadge } from "../_components/StatusBadge";
 
@@ -150,17 +163,28 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
 
   if (error) {
     return (
-      <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-        <span>{error}</span>
-        <button onClick={load} className="font-medium underline">
-          Retry
-        </button>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertTitle>{error}</AlertTitle>
+        <AlertDescription>
+          <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   if (run === null) {
-    return <p className="text-sm text-gray-500">Loading payroll run...</p>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    );
   }
 
   const isDraft = run.status === "draft";
@@ -172,78 +196,89 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
           <h1 className="text-2xl font-semibold">
             {MONTH_NAMES[run.month - 1]} {run.year}
           </h1>
-          <p className="text-sm text-gray-500">Run date: {run.run_date}</p>
+          <p className="text-sm text-muted-foreground">Run date: {run.run_date}</p>
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={run.status} />
           {isDraft && hasPermission("payroll.approve") && (
-            <button
-              onClick={handleApprove}
-              disabled={approving}
-              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
+            <Button onClick={handleApprove} disabled={approving}>
+              {approving && <Loader2 className="animate-spin" />}
               {approving ? "Approving..." : "Approve payroll run"}
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
-      {approveError && <p className="text-sm text-red-600">{approveError}</p>}
-      {pdfError && <p className="text-sm text-red-600">{pdfError}</p>}
+      {approveError && (
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{approveError}</AlertTitle>
+        </Alert>
+      )}
+      {pdfError && (
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{pdfError}</AlertTitle>
+        </Alert>
+      )}
 
-      <table className="w-full rounded bg-white text-sm shadow">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-gray-500">
-            <th className="px-4 py-2 font-medium">Employee</th>
-            <th className="px-4 py-2 font-medium">Basic</th>
-            <th className="px-4 py-2 font-medium">Bonus</th>
-            <th className="px-4 py-2 font-medium">Deduction</th>
-            <th className="px-4 py-2 font-medium">Advance recovery</th>
-            <th className="px-4 py-2 font-medium">Net pay</th>
-            <th className="px-4 py-2 font-medium"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {run.entries.map((entry) => (
-            <tr key={entry.id} className="border-b border-gray-100 last:border-0">
-              <td className="px-4 py-2">{entry.employee_name}</td>
-              <td className="px-4 py-2">{entry.basic_salary.toFixed(2)}</td>
-              <td className="px-4 py-2">{entry.total_bonus.toFixed(2)}</td>
-              <td className="px-4 py-2">{entry.total_deduction.toFixed(2)}</td>
-              <td className="px-4 py-2">{entry.total_advance_recovery.toFixed(2)}</td>
-              <td className="px-4 py-2 font-semibold">{entry.net_pay.toFixed(2)}</td>
-              <td className="px-4 py-2">
-                <button
-                  onClick={() => handlePrint(entry)}
-                  disabled={pdfLoadingId === entry.id}
-                  className="text-xs font-medium text-gray-700 underline disabled:opacity-40"
-                >
-                  {pdfLoadingId === entry.id ? "Generating..." : "Salary slip"}
-                </button>
-              </td>
-            </tr>
-          ))}
-          {run.entries.length === 0 && (
-            <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
-                No entries in this payroll run.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <div className="rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employee</TableHead>
+              <TableHead className="text-right">Basic</TableHead>
+              <TableHead className="text-right">Bonus</TableHead>
+              <TableHead className="text-right">Deduction</TableHead>
+              <TableHead className="text-right">Advance recovery</TableHead>
+              <TableHead className="text-right">Net pay</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {run.entries.map((entry) => (
+              <TableRow key={entry.id}>
+                <TableCell className="font-medium">{entry.employee_name}</TableCell>
+                <TableCell className="text-right tabular-nums">{entry.basic_salary.toFixed(2)}</TableCell>
+                <TableCell className="text-right tabular-nums">{entry.total_bonus.toFixed(2)}</TableCell>
+                <TableCell className="text-right tabular-nums">{entry.total_deduction.toFixed(2)}</TableCell>
+                <TableCell className="text-right tabular-nums">{entry.total_advance_recovery.toFixed(2)}</TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">{entry.net_pay.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0"
+                    onClick={() => handlePrint(entry)}
+                    disabled={pdfLoadingId === entry.id}
+                  >
+                    {pdfLoadingId === entry.id ? "Generating..." : "Salary slip"}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {run.entries.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  No entries in this payroll run.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {isDraft && hasPermission("payroll.create") && (
-        <form onSubmit={handleAddAdjustment} className="space-y-4 rounded bg-white p-6 shadow">
+        <form onSubmit={handleAddAdjustment} className="space-y-4 rounded-xl border bg-card p-6">
           <h2 className="text-sm font-semibold">Add bonus, deduction, or advance recovery</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Employee</label>
+              <label className="block text-sm font-medium text-muted-foreground">Employee</label>
               <select
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="" disabled>
                   Select an employee
@@ -256,11 +291,11 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Type</label>
+              <label className="block text-sm font-medium text-muted-foreground">Type</label>
               <select
                 value={adjustmentType}
                 onChange={(e) => setAdjustmentType(e.target.value as AdjustmentType)}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="bonus">Bonus</option>
                 <option value="deduction">Deduction</option>
@@ -271,12 +306,12 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
 
           {adjustmentType === "advance_installment" && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Advance</label>
+              <label className="block text-sm font-medium text-muted-foreground">Advance</label>
               <select
                 value={advanceId}
                 onChange={(e) => setAdvanceId(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="" disabled>
                   {employeeId ? "Select an advance" : "Select an employee first"}
@@ -288,14 +323,14 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
                 ))}
               </select>
               {employeeId && openAdvances.length === 0 && (
-                <p className="mt-1 text-xs text-gray-500">This employee has no open advances.</p>
+                <p className="mt-1 text-xs text-muted-foreground">This employee has no open advances.</p>
               )}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Amount</label>
+              <label className="block text-sm font-medium text-muted-foreground">Amount</label>
               <input
                 type="number"
                 min={0}
@@ -303,43 +338,40 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
             {adjustmentType === "advance_installment" ? (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Installment date</label>
+                <label className="block text-sm font-medium text-muted-foreground">Installment date</label>
                 <input
                   type="date"
                   value={installmentDate}
                   onChange={(e) => setInstallmentDate(e.target.value)}
                   required
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Reason</label>
+                <label className="block text-sm font-medium text-muted-foreground">Reason</label>
                 <input
                   type="text"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
             )}
           </div>
 
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError && <p className="text-sm text-destructive">{formError}</p>}
 
-          <div className="flex justify-end border-t border-gray-100 pt-4">
-            <button
-              type="submit"
-              disabled={submitting || !employeeId || !amount}
-              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
+          <div className="flex justify-end border-t pt-4">
+            <Button type="submit" disabled={submitting || !employeeId || !amount}>
+              {submitting && <Loader2 className="animate-spin" />}
               {submitting ? "Adding..." : "Add"}
-            </button>
+            </Button>
           </div>
         </form>
       )}

@@ -2,10 +2,23 @@
 
 import { useCallback, useEffect, useState, use } from "react";
 
+import { AlertCircle, Loader2, Printer } from "lucide-react";
+
 import { getDeliveryChallan, listParties } from "@embroidery/types";
-import type { DeliveryChallanDetailOut, Party } from "@embroidery/types";
+import type { DeliveryChallanDetailOut } from "@embroidery/types";
 
 import { ApiError, fetchPdfBlob } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const UNIT_LABELS: Record<string, string> = {
   shirt: "Shirt",
@@ -59,17 +72,28 @@ export default function DeliveryChallanDetailPage(props: { params: Promise<{ id:
 
   if (error) {
     return (
-      <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-        <span>{error}</span>
-        <button onClick={load} className="font-medium underline">
-          Retry
-        </button>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertTitle>{error}</AlertTitle>
+        <AlertDescription>
+          <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   if (challan === null) {
-    return <p className="text-sm text-gray-500">Loading challan...</p>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    );
   }
 
   return (
@@ -77,43 +101,42 @@ export default function DeliveryChallanDetailPage(props: { params: Promise<{ id:
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{challan.challan_number}</h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {partyName ?? "—"} &middot; delivered {challan.delivery_date}
           </p>
-          {challan.notes && <p className="mt-1 text-sm text-gray-500">{challan.notes}</p>}
+          {challan.notes && <p className="mt-1 text-sm text-muted-foreground">{challan.notes}</p>}
         </div>
         <div className="text-right">
-          <button
-            onClick={handlePrint}
-            disabled={printing}
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-          >
+          <Button onClick={handlePrint} disabled={printing}>
+            {printing ? <Loader2 className="animate-spin" /> : <Printer />}
             {printing ? "Generating..." : "Print"}
-          </button>
-          {printError && <p className="mt-1 text-xs text-red-600">{printError}</p>}
+          </Button>
+          {printError && <p className="mt-1 text-xs text-destructive">{printError}</p>}
         </div>
       </div>
 
-      <table className="w-full rounded bg-white text-sm shadow">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-gray-500">
-            <th className="px-4 py-2 font-medium">Lot #</th>
-            <th className="px-4 py-2 font-medium">Colour</th>
-            <th className="px-4 py-2 font-medium">Unit</th>
-            <th className="px-4 py-2 font-medium">Quantity</th>
-          </tr>
-        </thead>
-        <tbody>
-          {challan.lines.map((line) => (
-            <tr key={line.id} className="border-b border-gray-100 last:border-0">
-              <td className="px-4 py-2">{line.lot_number}</td>
-              <td className="px-4 py-2">{line.colour_name}</td>
-              <td className="px-4 py-2">{UNIT_LABELS[line.unit_type] ?? line.unit_type}</td>
-              <td className="px-4 py-2">{line.quantity}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Lot #</TableHead>
+              <TableHead>Colour</TableHead>
+              <TableHead>Unit</TableHead>
+              <TableHead className="text-right">Quantity</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {challan.lines.map((line) => (
+              <TableRow key={line.id}>
+                <TableCell>{line.lot_number}</TableCell>
+                <TableCell className="text-muted-foreground">{line.colour_name}</TableCell>
+                <TableCell className="text-muted-foreground">{UNIT_LABELS[line.unit_type] ?? line.unit_type}</TableCell>
+                <TableCell className="text-right tabular-nums">{line.quantity}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
