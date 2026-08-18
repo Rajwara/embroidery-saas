@@ -7,6 +7,6 @@
     "generate": "orval --config orval.config.ts"
   },
   "devDependencies": {
-    "orval": "^7.0.0"
+    "orval": "^8.24.0"
   }
 }
