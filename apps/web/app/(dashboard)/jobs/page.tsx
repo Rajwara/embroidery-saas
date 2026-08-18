@@ -2,12 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { AlertCircle, Wrench } from "lucide-react";
 
 import { listProductionJobs } from "@embroidery/types";
 import type { ProductionJobOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import { StatusBadge } from "./_components/StatusBadge";
 
@@ -38,61 +50,98 @@ export default function ProductionJobsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Production Jobs</h1>
-        {hasPermission("production_jobs.create") && (
-          <Link
-            href="/jobs/new"
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white"
-          >
-            New Job
-          </Link>
-        )}
+        {hasPermission("production_jobs.create") && <Button render={<Link href="/jobs/new" />}>New Job</Button>}
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && jobs === null && <JobsTableSkeleton />}
+
+      {!error && jobs !== null && jobs.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <Wrench className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No production jobs yet</p>
+          <p className="text-sm text-muted-foreground">Jobs you create will show up here.</p>
         </div>
       )}
 
-      {!error && jobs === null && <p className="text-sm text-gray-500">Loading production jobs...</p>}
-
-      {!error && jobs !== null && jobs.length === 0 && (
-        <p className="text-sm text-gray-500">No production jobs found.</p>
-      )}
-
       {!error && jobs !== null && jobs.length > 0 && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Lot #</th>
-              <th className="px-4 py-2 font-medium">Colour</th>
-              <th className="px-4 py-2 font-medium">Design</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((job) => (
-              <tr key={job.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">
-                  <Link href={`/jobs/${job.id}`} className="font-medium text-gray-900 underline">
-                    {job.lot_number}
-                  </Link>
-                </td>
-                <td className="px-4 py-2">{job.colour_name}</td>
-                <td className="px-4 py-2">
-                  {job.design_master_number} &middot; {job.design_name}
-                </td>
-                <td className="px-4 py-2">
-                  <StatusBadge status={job.status} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Lot #</TableHead>
+                <TableHead>Colour</TableHead>
+                <TableHead>Design</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {jobs.map((job) => (
+                <TableRow key={job.id}>
+                  <TableCell>
+                    <Link href={`/jobs/${job.id}`} className="font-medium text-foreground hover:underline">
+                      {job.lot_number}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{job.colour_name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {job.design_master_number} &middot; {job.design_name}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={job.status} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
+    </div>
+  );
+}
+
+function JobsTableSkeleton() {
+  return (
+    <div className="rounded-xl border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Lot #</TableHead>
+            <TableHead>Colour</TableHead>
+            <TableHead>Design</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-32" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

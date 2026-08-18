@@ -2,12 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { AlertCircle, Receipt } from "lucide-react";
 
 import { listExpenses } from "@embroidery/types";
 import type { ExpenseOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function ExpensesPage() {
   const { hasPermission } = useAuth();
@@ -37,54 +49,97 @@ export default function ExpensesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Expenses</h1>
         {hasPermission("expenses.create") && (
-          <Link
-            href="/expenses/new"
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white"
-          >
-            New Expense
-          </Link>
+          <Button render={<Link href="/expenses/new" />}>New Expense</Button>
         )}
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && expenses === null && <ExpensesTableSkeleton />}
+
+      {!error && expenses !== null && expenses.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <Receipt className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No expenses yet</p>
+          <p className="text-sm text-muted-foreground">Expenses you add will show up here.</p>
         </div>
       )}
 
-      {!error && expenses === null && <p className="text-sm text-gray-500">Loading expenses...</p>}
-
-      {!error && expenses !== null && expenses.length === 0 && (
-        <p className="text-sm text-gray-500">No expenses found.</p>
-      )}
-
       {!error && expenses !== null && expenses.length > 0 && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Expense #</th>
-              <th className="px-4 py-2 font-medium">Category</th>
-              <th className="px-4 py-2 font-medium">Description</th>
-              <th className="px-4 py-2 font-medium">Date</th>
-              <th className="px-4 py-2 font-medium">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {expenses.map((expense) => (
-              <tr key={expense.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2 font-medium text-gray-900">{expense.expense_number}</td>
-                <td className="px-4 py-2">{expense.category}</td>
-                <td className="px-4 py-2">{expense.description}</td>
-                <td className="px-4 py-2">{expense.expense_date}</td>
-                <td className="px-4 py-2">{expense.amount.toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Expense #</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {expenses.map((expense) => (
+                <TableRow key={expense.id}>
+                  <TableCell className="font-medium">{expense.expense_number}</TableCell>
+                  <TableCell>{expense.category}</TableCell>
+                  <TableCell className="text-muted-foreground">{expense.description}</TableCell>
+                  <TableCell className="text-muted-foreground">{expense.expense_date}</TableCell>
+                  <TableCell className="text-right tabular-nums">{expense.amount.toFixed(2)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
+    </div>
+  );
+}
+
+function ExpensesTableSkeleton() {
+  return (
+    <div className="rounded-xl border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Expense #</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-40" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell className="text-right">
+                <Skeleton className="ml-auto h-4 w-16" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

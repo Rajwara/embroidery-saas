@@ -2,10 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { AlertCircle, Cog } from "lucide-react";
+
 import { listMachines } from "@embroidery/types";
 import type { MachineOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function MachinesPage() {
   const [machines, setMachines] = useState<MachineOut[] | null>(null);
@@ -34,44 +48,96 @@ export default function MachinesPage() {
       <h1 className="text-2xl font-semibold">Machines</h1>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && machines === null && <MachinesTableSkeleton />}
+
+      {!error && machines !== null && machines.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <Cog className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No machines yet</p>
+          <p className="text-sm text-muted-foreground">Machines you add will show up here.</p>
         </div>
       )}
 
-      {!error && machines === null && <p className="text-sm text-gray-500">Loading machines...</p>}
-
-      {!error && machines !== null && machines.length === 0 && (
-        <p className="text-sm text-gray-500">No machines found.</p>
-      )}
-
       {!error && machines !== null && machines.length > 0 && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Code</th>
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Type</th>
-              <th className="px-4 py-2 font-medium">Heads</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {machines.map((machine) => (
-              <tr key={machine.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">{machine.code}</td>
-                <td className="px-4 py-2">{machine.name ?? "—"}</td>
-                <td className="px-4 py-2">{machine.machine_type ?? "—"}</td>
-                <td className="px-4 py-2">{machine.number_of_heads ?? "—"}</td>
-                <td className="px-4 py-2">{machine.is_active ? "Active" : "Inactive"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Code</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Heads</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {machines.map((machine) => (
+                <TableRow key={machine.id}>
+                  <TableCell className="font-medium">{machine.code}</TableCell>
+                  <TableCell className="text-muted-foreground">{machine.name ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{machine.machine_type ?? "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">{machine.number_of_heads ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant={machine.is_active ? "success" : "secondary"}>
+                      {machine.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
+    </div>
+  );
+}
+
+function MachinesTableSkeleton() {
+  return (
+    <div className="rounded-xl border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Code</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead className="text-right">Heads</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-28" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell className="text-right">
+                <Skeleton className="ml-auto h-4 w-8" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

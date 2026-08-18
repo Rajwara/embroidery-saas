@@ -2,12 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { AlertCircle, Shapes } from "lucide-react";
 
 import { listDesigns } from "@embroidery/types";
 import type { DesignOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function DesignsPage() {
   const { hasPermission } = useAuth();
@@ -37,54 +49,89 @@ export default function DesignsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Designs</h1>
         {hasPermission("designs.create") && (
-          <Link
-            href="/designs/new"
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white"
-          >
-            New Design
-          </Link>
+          <Button render={<Link href="/designs/new" />}>New Design</Button>
         )}
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && designs === null && <DesignsTableSkeleton />}
+
+      {!error && designs !== null && designs.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <Shapes className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No designs yet</p>
+          <p className="text-sm text-muted-foreground">Designs you add will show up here.</p>
         </div>
       )}
 
-      {!error && designs === null && <p className="text-sm text-gray-500">Loading designs...</p>}
-
-      {!error && designs !== null && designs.length === 0 && (
-        <p className="text-sm text-gray-500">No designs found.</p>
-      )}
-
       {!error && designs !== null && designs.length > 0 && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Master #</th>
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {designs.map((design) => (
-              <tr key={design.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">
-                  <Link href={`/designs/${design.id}`} className="font-medium text-gray-900 underline">
-                    {design.master_number}
-                  </Link>
-                </td>
-                <td className="px-4 py-2">{design.name}</td>
-                <td className="px-4 py-2">{design.notes ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Master #</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Notes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {designs.map((design) => (
+                <TableRow key={design.id}>
+                  <TableCell>
+                    <Link href={`/designs/${design.id}`} className="font-medium text-foreground hover:underline">
+                      {design.master_number}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{design.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{design.notes ?? "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
+    </div>
+  );
+}
+
+function DesignsTableSkeleton() {
+  return (
+    <div className="rounded-xl border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Master #</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Notes</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-32" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-40" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

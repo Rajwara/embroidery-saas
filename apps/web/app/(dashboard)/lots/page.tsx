@@ -2,12 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { AlertCircle, Package } from "lucide-react";
 
 import { listBranches, listLots, listParties } from "@embroidery/types";
 import type { BranchOut, LotOut, Party } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import { StatusBadge } from "./_components/StatusBadge";
 
@@ -53,65 +65,116 @@ export default function LotsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Lots</h1>
-        {hasPermission("lots.create") && (
-          <Link
-            href="/lots/new"
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white"
-          >
-            New Lot
-          </Link>
-        )}
+        {hasPermission("lots.create") && <Button render={<Link href="/lots/new" />}>New Lot</Button>}
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && lots === null && <LotsTableSkeleton />}
+
+      {!error && lots !== null && lots.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <Package className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No lots yet</p>
+          <p className="text-sm text-muted-foreground">Lots you receive will show up here.</p>
         </div>
       )}
 
-      {!error && lots === null && <p className="text-sm text-gray-500">Loading lots...</p>}
-
-      {!error && lots !== null && lots.length === 0 && (
-        <p className="text-sm text-gray-500">No lots found.</p>
-      )}
-
       {!error && lots !== null && lots.length > 0 && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Lot #</th>
-              <th className="px-4 py-2 font-medium">Party</th>
-              <th className="px-4 py-2 font-medium">Branch</th>
-              <th className="px-4 py-2 font-medium">Suit type</th>
-              <th className="px-4 py-2 font-medium">Suits</th>
-              <th className="px-4 py-2 font-medium">Received</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lots.map((lot) => (
-              <tr key={lot.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">
-                  <Link href={`/lots/${lot.id}`} className="font-medium text-gray-900 underline">
-                    {lot.lot_number}
-                  </Link>
-                </td>
-                <td className="px-4 py-2">{partyName(lot.party_id)}</td>
-                <td className="px-4 py-2">{branchName(lot.branch_id)}</td>
-                <td className="px-4 py-2">{SUIT_TYPE_LABELS[lot.suit_type] ?? lot.suit_type}</td>
-                <td className="px-4 py-2">{lot.total_suit_count}</td>
-                <td className="px-4 py-2">{lot.received_date}</td>
-                <td className="px-4 py-2">
-                  <StatusBadge status={lot.status} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Lot #</TableHead>
+                <TableHead>Party</TableHead>
+                <TableHead>Branch</TableHead>
+                <TableHead>Suit type</TableHead>
+                <TableHead className="text-right">Suits</TableHead>
+                <TableHead>Received</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lots.map((lot) => (
+                <TableRow key={lot.id}>
+                  <TableCell>
+                    <Link href={`/lots/${lot.id}`} className="font-medium text-foreground hover:underline">
+                      {lot.lot_number}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{partyName(lot.party_id)}</TableCell>
+                  <TableCell className="text-muted-foreground">{branchName(lot.branch_id)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {SUIT_TYPE_LABELS[lot.suit_type] ?? lot.suit_type}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{lot.total_suit_count}</TableCell>
+                  <TableCell className="text-muted-foreground">{lot.received_date}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={lot.status} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
+    </div>
+  );
+}
+
+function LotsTableSkeleton() {
+  return (
+    <div className="rounded-xl border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Lot #</TableHead>
+            <TableHead>Party</TableHead>
+            <TableHead>Branch</TableHead>
+            <TableHead>Suit type</TableHead>
+            <TableHead className="text-right">Suits</TableHead>
+            <TableHead>Received</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-24" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell className="text-right">
+                <Skeleton className="ml-auto h-4 w-8" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-5 w-24 rounded-full" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

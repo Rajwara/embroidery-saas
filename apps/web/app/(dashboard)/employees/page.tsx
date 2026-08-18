@@ -2,10 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { AlertCircle, UserRound } from "lucide-react";
+
 import { listEmployees } from "@embroidery/types";
 import type { EmployeeOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<EmployeeOut[] | null>(null);
@@ -34,44 +48,96 @@ export default function EmployeesPage() {
       <h1 className="text-2xl font-semibold">Employees</h1>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && employees === null && <EmployeesTableSkeleton />}
+
+      {!error && employees !== null && employees.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <UserRound className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No employees yet</p>
+          <p className="text-sm text-muted-foreground">Employees you add will show up here.</p>
         </div>
       )}
 
-      {!error && employees === null && <p className="text-sm text-gray-500">Loading employees...</p>}
-
-      {!error && employees !== null && employees.length === 0 && (
-        <p className="text-sm text-gray-500">No employees found.</p>
-      )}
-
       {!error && employees !== null && employees.length > 0 && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Code</th>
-              <th className="px-4 py-2 font-medium">Designation</th>
-              <th className="px-4 py-2 font-medium">Phone</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((employee) => (
-              <tr key={employee.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">{employee.full_name}</td>
-                <td className="px-4 py-2">{employee.employee_code}</td>
-                <td className="px-4 py-2">{employee.designation ?? "—"}</td>
-                <td className="px-4 py-2">{employee.phone ?? "—"}</td>
-                <td className="px-4 py-2">{employee.is_active ? "Active" : "Inactive"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Designation</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {employees.map((employee) => (
+                <TableRow key={employee.id}>
+                  <TableCell className="font-medium">{employee.full_name}</TableCell>
+                  <TableCell className="text-muted-foreground">{employee.employee_code}</TableCell>
+                  <TableCell className="text-muted-foreground">{employee.designation ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{employee.phone ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant={employee.is_active ? "success" : "secondary"}>
+                      {employee.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
+    </div>
+  );
+}
+
+function EmployeesTableSkeleton() {
+  return (
+    <div className="rounded-xl border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Code</TableHead>
+            <TableHead>Designation</TableHead>
+            <TableHead>Phone</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-32" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-24" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
