@@ -10,6 +10,7 @@ from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
 from app.models import Branch, DesignVariant, Factory, Invoice, InvoiceLineItem, Party, User
 from app.pdf import html_to_pdf
+from app.pricing import per_suit_line_total, stitch_based_line_total
 from app.schemas.invoice import (
     InvoiceCreateRequest,
     InvoiceDetailOut,
@@ -110,7 +111,7 @@ def _build_line_item(
     if payload.pricing_type == "per_suit":
         if payload.unit_price is None or payload.unit_price <= 0:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="unit_price_required")
-        line_total = round(payload.quantity * payload.unit_price, 2)
+        line_total = per_suit_line_total(payload.quantity, payload.unit_price)
         return InvoiceLineItem(
             tenant_id=tenant_id,
             description=payload.description,
@@ -133,7 +134,7 @@ def _build_line_item(
     if variant.stitch_count is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="design_variant_stitch_count_not_set")
 
-    line_total = round(payload.quantity * variant.stitch_count * payload.rate_per_thousand_stitches / 1000, 2)
+    line_total = stitch_based_line_total(payload.quantity, variant.stitch_count, payload.rate_per_thousand_stitches)
     return InvoiceLineItem(
         tenant_id=tenant_id,
         description=payload.description,

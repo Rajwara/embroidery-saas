@@ -23,7 +23,11 @@ dependencies = [
 [tool.uv]
 package = false
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
 [dependency-groups]
 dev = [
+    "hypothesis>=6.165.10",
     "pytest>=9.1.1",
 ]

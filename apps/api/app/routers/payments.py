@@ -8,6 +8,7 @@ from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
 from app.models import Branch, Factory, Invoice, InvoiceLineItem, Party, Payment, PaymentAllocation, User
+from app.pricing import allocation_within_invoice_balance, allocations_sum_matches_amount
 from app.schemas.payment import (
     InvoiceBalanceOut,
     PaymentAllocationCreateRequest,
@@ -92,7 +93,7 @@ def _validate_allocation(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="invoice_party_mismatch")
         total = _invoice_total(db, invoice.id)
         already_paid = _invoice_paid_amount(db, invoice.id)
-        if already_paid + payload.amount > total:
+        if not allocation_within_invoice_balance(total, already_paid, payload.amount):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="allocation_exceeds_invoice_balance")
     elif payload.invoice_id is not None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="invoice_id_not_allowed")
@@ -153,8 +154,7 @@ def create_payment(
     if not payload.allocations:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="no_allocations")
 
-    allocations_sum = round(sum(a.amount for a in payload.allocations), 2)
-    if allocations_sum != round(payload.amount, 2):
+    if not allocations_sum_matches_amount([a.amount for a in payload.allocations], payload.amount):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="allocations_must_sum_to_amount")
 
     for allocation_payload in payload.allocations:
