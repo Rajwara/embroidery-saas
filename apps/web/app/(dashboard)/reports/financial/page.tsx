@@ -2,10 +2,22 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { AlertCircle } from "lucide-react";
+
 import { getFinancialSummaryReport, listBranches } from "@embroidery/types";
 import type { BranchOut, FinancialSummaryReportOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
+import { FinancialSummaryChart } from "@/components/FinancialSummaryChart";
 
 function firstOfMonth(): string {
   const now = new Date();
@@ -53,34 +65,34 @@ export default function FinancialSummaryReportPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Financial Summary</h1>
-        <p className="text-sm text-gray-500">Invoiced revenue vs. expenses and purchases for the period.</p>
+        <p className="text-sm text-muted-foreground">Invoiced revenue vs. expenses and purchases for the period.</p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded bg-white p-4 shadow">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600">From</label>
+          <label className="block text-xs font-medium text-muted-foreground">From</label>
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600">To</label>
+          <label className="block text-xs font-medium text-muted-foreground">To</label>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600">Branch</label>
+          <label className="block text-xs font-medium text-muted-foreground">Branch</label>
           <select
             value={branchId}
             onChange={(e) => setBranchId(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="">All branches</option>
             {branches.map((branch) => (
@@ -93,43 +105,59 @@ export default function FinancialSummaryReportPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && report === null && (
+        <div className="space-y-4">
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full max-w-md rounded-xl" />
         </div>
       )}
 
-      {!error && report === null && <p className="text-sm text-gray-500">Loading report...</p>}
-
       {!error && report !== null && (
-        <table className="w-full max-w-md rounded bg-white text-sm shadow">
-          <tbody>
-            <tr className="border-b border-gray-100">
-              <td className="px-4 py-3">Revenue (invoiced)</td>
-              <td className="px-4 py-3 text-right font-semibold">{report.revenue.toFixed(2)}</td>
-            </tr>
-            <tr className="border-b border-gray-100">
-              <td className="px-4 py-3">Expenses</td>
-              <td className="px-4 py-3 text-right font-semibold text-red-600">
-                -{report.expenses.toFixed(2)}
-              </td>
-            </tr>
-            <tr className="border-b border-gray-100">
-              <td className="px-4 py-3">Purchases</td>
-              <td className="px-4 py-3 text-right font-semibold text-red-600">
-                -{report.purchases.toFixed(2)}
-              </td>
-            </tr>
-            <tr>
-              <td className="px-4 py-3 font-semibold">Net</td>
-              <td className={`px-4 py-3 text-right text-base font-bold ${report.net < 0 ? "text-red-600" : "text-green-700"}`}>
-                {report.net.toFixed(2)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="space-y-4">
+          <FinancialSummaryChart revenue={report.revenue} expenses={report.expenses} purchases={report.purchases} />
+
+          <div className="w-full max-w-md rounded-xl border">
+            <Table>
+              <TableBody>
+                <TableRow>
+                  <TableCell>Revenue (invoiced)</TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">{report.revenue.toFixed(2)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Expenses</TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums text-destructive">
+                    -{report.expenses.toFixed(2)}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Purchases</TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums text-destructive">
+                    -{report.purchases.toFixed(2)}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-semibold">Net</TableCell>
+                  <TableCell
+                    className={`text-right text-base font-bold tabular-nums ${report.net < 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-400"}`}
+                  >
+                    {report.net.toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -2,16 +2,37 @@
 
 import { useCallback, useEffect, useState, use } from "react";
 
+import { AlertCircle, Loader2, Printer, Receipt } from "lucide-react";
+
 import { getParty, getPartyLedger } from "@embroidery/types";
 import type { LedgerEntryOut, PartyDocsOut } from "@embroidery/types";
 
 import { ApiError, fetchPdfBlob } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const ENTRY_TYPE_LABELS: Record<string, string> = {
   opening_balance: "Opening Balance",
   invoice: "Invoice",
   payment: "Payment",
+};
+
+const ENTRY_TYPE_BADGE_VARIANT: Record<string, "default" | "secondary" | "success"> = {
+  opening_balance: "secondary",
+  invoice: "default",
+  payment: "success",
 };
 
 export default function PartyDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -67,17 +88,28 @@ export default function PartyDetailPage(props: { params: Promise<{ id: string }>
 
   if (error) {
     return (
-      <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-        <span>{error}</span>
-        <button onClick={load} className="font-medium underline">
-          Retry
-        </button>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertTitle>{error}</AlertTitle>
+        <AlertDescription>
+          <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   if (party === null) {
-    return <p className="text-sm text-gray-500">Loading party...</p>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
   }
 
   return (
@@ -85,57 +117,94 @@ export default function PartyDetailPage(props: { params: Promise<{ id: string }>
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{party.name}</h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {party.contact_person ?? "—"} &middot; {party.phone ?? "—"} &middot; {party.email ?? "—"}
           </p>
-          {party.address && <p className="mt-1 text-sm text-gray-500">{party.address}</p>}
+          {party.address && <p className="mt-1 text-sm text-muted-foreground">{party.address}</p>}
         </div>
         {canSeeMoney && (
           <div className="text-right">
-            <button
-              onClick={handlePrint}
-              disabled={printing}
-              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
+            <Button onClick={handlePrint} disabled={printing}>
+              {printing ? <Loader2 className="animate-spin" /> : <Printer />}
               {printing ? "Generating..." : "Print statement"}
-            </button>
-            {printError && <p className="mt-1 text-xs text-red-600">{printError}</p>}
+            </Button>
+            {printError && <p className="mt-1 text-xs text-destructive">{printError}</p>}
           </div>
         )}
       </div>
 
       {canSeeMoney && (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Ledger</h2>
-          {ledger === null && <p className="text-sm text-gray-500">Loading ledger...</p>}
-          {ledger !== null && (
-            <table className="w-full rounded bg-white text-sm shadow">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="px-4 py-2 font-medium">Date</th>
-                  <th className="px-4 py-2 font-medium">Type</th>
-                  <th className="px-4 py-2 font-medium">Reference</th>
-                  <th className="px-4 py-2 font-medium">Debit</th>
-                  <th className="px-4 py-2 font-medium">Credit</th>
-                  <th className="px-4 py-2 font-medium">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledger.map((entry, i) => (
-                  <tr key={i} className="border-b border-gray-100 last:border-0">
-                    <td className="px-4 py-2">{entry.entry_date}</td>
-                    <td className="px-4 py-2">{ENTRY_TYPE_LABELS[entry.entry_type] ?? entry.entry_type}</td>
-                    <td className="px-4 py-2">{entry.reference}</td>
-                    <td className="px-4 py-2">{entry.debit ? entry.debit.toFixed(2) : ""}</td>
-                    <td className="px-4 py-2">{entry.credit ? entry.credit.toFixed(2) : ""}</td>
-                    <td className="px-4 py-2 font-medium">{entry.balance.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Ledger</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {ledger === null && <LedgerSkeleton />}
+
+            {ledger !== null && ledger.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <Receipt className="size-8 text-muted-foreground" />
+                <p className="text-sm font-medium">No transactions yet</p>
+                <p className="text-sm text-muted-foreground">Invoices and payments will show up here.</p>
+              </div>
+            )}
+
+            {ledger !== null && ledger.length > 0 && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead className="text-right">Debit</TableHead>
+                    <TableHead className="text-right">Credit</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ledger.map((entry, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="text-muted-foreground">{entry.entry_date}</TableCell>
+                      <TableCell>
+                        <Badge variant={ENTRY_TYPE_BADGE_VARIANT[entry.entry_type] ?? "secondary"}>
+                          {ENTRY_TYPE_LABELS[entry.entry_type] ?? entry.entry_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{entry.reference}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {entry.debit ? entry.debit.toFixed(2) : ""}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {entry.credit ? entry.credit.toFixed(2) : ""}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {entry.balance.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       )}
+    </div>
+  );
+}
+
+function LedgerSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-5 w-24 rounded-full" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="ml-auto h-4 w-16" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+      ))}
     </div>
   );
 }
