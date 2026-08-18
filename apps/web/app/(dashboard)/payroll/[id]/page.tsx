@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, use } from "react";
 
 import { AlertCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   addAdvanceInstallment,
@@ -16,6 +17,16 @@ import type { AdvanceOut, PayrollEntryOut, PayrollRunDetailOut } from "@embroide
 
 import { ApiError, fetchPdfBlob } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,6 +64,7 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [confirmingApprove, setConfirmingApprove] = useState(false);
   const [approving, setApproving] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
 
@@ -123,6 +135,7 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
       }
       resetForm();
       load();
+      toast.success("Added");
     } catch (err) {
       setFormError(err instanceof ApiError ? err.detail : "Something went wrong.");
     } finally {
@@ -130,16 +143,15 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
     }
   };
 
-  const handleApprove = async () => {
+  const confirmApprove = async () => {
     if (!run) return;
-    if (!window.confirm("Approve this payroll run? No further bonuses, deductions, or advance recoveries can be added afterward.")) {
-      return;
-    }
     setApproveError(null);
     setApproving(true);
     try {
       const updated = await approvePayrollRun(run.id);
       setRun(updated);
+      setConfirmingApprove(false);
+      toast.success("Payroll run approved");
     } catch (err) {
       setApproveError(err instanceof ApiError ? err.detail : "Could not approve payroll run.");
     } finally {
@@ -201,7 +213,7 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
         <div className="flex items-center gap-3">
           <StatusBadge status={run.status} />
           {isDraft && hasPermission("payroll.approve") && (
-            <Button onClick={handleApprove} disabled={approving}>
+            <Button onClick={() => setConfirmingApprove(true)} disabled={approving}>
               {approving && <Loader2 className="animate-spin" />}
               {approving ? "Approving..." : "Approve payroll run"}
             </Button>
@@ -375,6 +387,24 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
           </div>
         </form>
       )}
+
+      <AlertDialog open={confirmingApprove} onOpenChange={(open) => !open && setConfirmingApprove(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve this payroll run?</AlertDialogTitle>
+            <AlertDialogDescription>
+              No further bonuses, deductions, or advance recoveries can be added afterward. This can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={approving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmApprove} disabled={approving}>
+              {approving && <Loader2 className="animate-spin" />}
+              {approving ? "Approving..." : "Approve"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

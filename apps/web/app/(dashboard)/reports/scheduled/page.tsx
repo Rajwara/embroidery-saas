@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { AlertCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   createScheduledReport,
@@ -15,6 +16,16 @@ import type { BranchOut, ScheduledReportSettingOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +55,9 @@ export default function ScheduledReportsPage() {
   const [branchId, setBranchId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<ScheduledReportSettingOut | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(() => {
     setError(null);
@@ -82,6 +96,7 @@ export default function ScheduledReportsPage() {
       setRecipientEmail("");
       setBranchId("");
       load();
+      toast.success("Report scheduled");
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.detail : "Something went wrong.");
     } finally {
@@ -93,20 +108,24 @@ export default function ScheduledReportsPage() {
     try {
       await updateScheduledReport(setting.id, { is_active: !setting.is_active });
       load();
+      toast.success(setting.is_active ? "Paused" : "Resumed");
     } catch {
-      // no-op -- the row simply won't reflect the toggle, user can retry
+      toast.error("Could not update this schedule. Please try again.");
     }
   };
 
-  const handleDelete = async (setting: ScheduledReportSettingOut) => {
-    if (!window.confirm(`Stop sending ${REPORT_TYPE_LABELS[setting.report_type] ?? setting.report_type}?`)) {
-      return;
-    }
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteScheduledReport(setting.id);
+      await deleteScheduledReport(deleteTarget.id);
+      setDeleteTarget(null);
       load();
+      toast.success("Schedule deleted");
     } catch {
-      // no-op -- row stays, user can retry
+      toast.error("Could not delete this schedule. Please try again.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -181,7 +200,7 @@ export default function ScheduledReportsPage() {
                           variant="link"
                           size="sm"
                           className="h-auto p-0 text-destructive"
-                          onClick={() => handleDelete(setting)}
+                          onClick={() => setDeleteTarget(setting)}
                         >
                           Delete
                         </Button>
@@ -264,6 +283,27 @@ export default function ScheduledReportsPage() {
           </div>
         </form>
       )}
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Stop sending {deleteTarget && (REPORT_TYPE_LABELS[deleteTarget.report_type] ?? deleteTarget.report_type)}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This schedule will be deleted and {deleteTarget?.recipient_email} will stop receiving it. This can&apos;t
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmDelete} disabled={deleting}>
+              {deleting && <Loader2 className="animate-spin" />}
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

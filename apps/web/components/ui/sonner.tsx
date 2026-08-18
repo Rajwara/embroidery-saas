@@ -1,15 +1,16 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
+// This app is light-mode-only (no theme toggle exists anywhere), so this is
+// hardcoded rather than wired to next-themes' useTheme() -- pulling in a
+// whole ThemeProvider just to satisfy one component's theme prop would be
+// dead weight for a toggle that doesn't exist.
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="light"
       className="toaster group"
       icons={{
         success: (
