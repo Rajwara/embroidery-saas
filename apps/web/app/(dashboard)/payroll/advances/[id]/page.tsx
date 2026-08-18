@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getAdvance } from "@embroidery/types";
 import type { AdvanceDetailOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 
-export default function AdvanceDetailPage({ params }: { params: { id: string } }) {
+export default function AdvanceDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [advance, setAdvance] = useState<AdvanceDetailOut | null>(null);
   const [error, setError] = useState<string | null>(null);
 

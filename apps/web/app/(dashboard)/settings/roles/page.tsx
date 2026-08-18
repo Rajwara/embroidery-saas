@@ -11,9 +11,9 @@ import { useAuth } from "@/lib/auth-context";
 function groupByModule(permissions: PermissionOut[]): [string, PermissionOut[]][] {
   const groups = new Map<string, PermissionOut[]>();
   for (const permission of permissions) {
-    const module = permission.code.split(".")[0];
-    if (!groups.has(module)) groups.set(module, []);
-    groups.get(module)!.push(permission);
+    const moduleName = permission.code.split(".")[0];
+    if (!groups.has(moduleName)) groups.set(moduleName, []);
+    groups.get(moduleName)!.push(permission);
   }
   return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
 }

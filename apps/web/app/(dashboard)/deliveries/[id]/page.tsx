@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getDeliveryChallan, listParties } from "@embroidery/types";
 import type { DeliveryChallanDetailOut, Party } from "@embroidery/types";
@@ -13,7 +13,8 @@ const UNIT_LABELS: Record<string, string> = {
   trouser: "Trouser",
 };
 
-export default function DeliveryChallanDetailPage({ params }: { params: { id: string } }) {
+export default function DeliveryChallanDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [challan, setChallan] = useState<DeliveryChallanDetailOut | null>(null);
   const [partyName, setPartyName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

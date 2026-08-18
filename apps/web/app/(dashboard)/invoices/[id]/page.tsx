@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getInvoice, listParties } from "@embroidery/types";
 import type { InvoiceDetailOut, Party } from "@embroidery/types";
@@ -12,7 +12,8 @@ const PRICING_LABELS: Record<string, string> = {
   stitch_based: "Stitch-based",
 };
 
-export default function InvoiceDetailPage({ params }: { params: { id: string } }) {
+export default function InvoiceDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [invoice, setInvoice] = useState<InvoiceDetailOut | null>(null);
   const [partyName, setPartyName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

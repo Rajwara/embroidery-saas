@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getParty, getPartyLedger } from "@embroidery/types";
 import type { LedgerEntryOut, PartyDocsOut } from "@embroidery/types";
@@ -14,7 +14,8 @@ const ENTRY_TYPE_LABELS: Record<string, string> = {
   payment: "Payment",
 };
 
-export default function PartyDetailPage({ params }: { params: { id: string } }) {
+export default function PartyDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { hasPermission } = useAuth();
   const canSeeMoney = hasPermission("parties.see_money");
 

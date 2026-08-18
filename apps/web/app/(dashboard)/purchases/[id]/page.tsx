@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getPurchase, listSuppliers } from "@embroidery/types";
 import type { PurchaseDetailOut, Supplier } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 
-export default function PurchaseDetailPage({ params }: { params: { id: string } }) {
+export default function PurchaseDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [purchase, setPurchase] = useState<PurchaseDetailOut | null>(null);
   const [supplierName, setSupplierName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

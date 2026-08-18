@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import {
   addAdvanceInstallment,
@@ -24,7 +24,8 @@ const MONTH_NAMES = [
 
 type AdjustmentType = "bonus" | "deduction" | "advance_installment";
 
-export default function PayrollRunDetailPage({ params }: { params: { id: string } }) {
+export default function PayrollRunDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { hasPermission } = useAuth();
   const [run, setRun] = useState<PayrollRunDetailOut | null>(null);
   const [error, setError] = useState<string | null>(null);

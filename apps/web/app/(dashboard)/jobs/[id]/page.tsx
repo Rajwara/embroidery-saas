@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getProductionJob, listMachines } from "@embroidery/types";
 import type { MachineOut, ProductionJobComponentWithAllocationsOut, ProductionJobDetailOut } from "@embroidery/types";
@@ -10,7 +10,8 @@ import { ApiError } from "@/lib/api";
 import { ComponentAllocation } from "../_components/ComponentAllocation";
 import { StatusBadge } from "../_components/StatusBadge";
 
-export default function ProductionJobDetailPage({ params }: { params: { id: string } }) {
+export default function ProductionJobDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [job, setJob] = useState<ProductionJobDetailOut | null>(null);
   const [machines, setMachines] = useState<MachineOut[]>([]);
   const [error, setError] = useState<string | null>(null);

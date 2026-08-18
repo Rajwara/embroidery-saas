@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getSupplier, getSupplierLedger } from "@embroidery/types";
 import type { SupplierDocsOut, SupplierLedgerEntryOut } from "@embroidery/types";
@@ -13,7 +13,8 @@ const ENTRY_TYPE_LABELS: Record<string, string> = {
   purchase: "Purchase",
 };
 
-export default function SupplierDetailPage({ params }: { params: { id: string } }) {
+export default function SupplierDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { hasPermission } = useAuth();
   const canSeeMoney = hasPermission("suppliers.see_money");
 

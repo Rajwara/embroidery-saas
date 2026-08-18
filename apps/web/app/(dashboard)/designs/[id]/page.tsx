@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { addDesignVariant, getDesign, removeDesignVariant } from "@embroidery/types";
 import type { DesignDetailOut, DesignVariantCreateRequest, DesignVariantOut } from "@embroidery/types";
@@ -23,7 +23,8 @@ const COMPONENT_LABELS: Record<string, string> = {
   dupatta: "Dupatta",
 };
 
-export default function DesignDetailPage({ params }: { params: { id: string } }) {
+export default function DesignDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [design, setDesign] = useState<DesignDetailOut | null>(null);
   const [error, setError] = useState<string | null>(null);
 

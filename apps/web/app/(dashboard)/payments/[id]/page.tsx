@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getPayment, listParties } from "@embroidery/types";
 import type { Party, PaymentDetailOut } from "@embroidery/types";
@@ -21,7 +21,8 @@ const ALLOCATION_TYPE_LABELS: Record<string, string> = {
   unallocated: "Unallocated",
 };
 
-export default function PaymentDetailPage({ params }: { params: { id: string } }) {
+export default function PaymentDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [payment, setPayment] = useState<PaymentDetailOut | null>(null);
   const [partyName, setPartyName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

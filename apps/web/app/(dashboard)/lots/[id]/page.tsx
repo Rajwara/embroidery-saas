@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getLot, listBranches, listParties } from "@embroidery/types";
 import type { BranchOut, LotDetailOut, Party } from "@embroidery/types";
@@ -25,7 +25,8 @@ const COMPONENT_LABELS: Record<string, string> = {
   dupatta: "Dupatta",
 };
 
-export default function LotDetailPage({ params }: { params: { id: string } }) {
+export default function LotDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [lot, setLot] = useState<LotDetailOut | null>(null);
   const [partyName, setPartyName] = useState<string | null>(null);
   const [branchName, setBranchName] = useState<string | null>(null);

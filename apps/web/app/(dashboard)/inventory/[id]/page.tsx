@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 import { getInventoryItem, listStockTransactions } from "@embroidery/types";
 import type { InventoryItemOut, StockTransactionOut } from "@embroidery/types";
@@ -15,7 +15,8 @@ const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   adjustment: "Adjustment",
 };
 
-export default function InventoryItemDetailPage({ params }: { params: { id: string } }) {
+export default function InventoryItemDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [item, setItem] = useState<InventoryItemOut | null>(null);
   const [transactions, setTransactions] = useState<StockTransactionOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);

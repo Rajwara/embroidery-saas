@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/lib/auth-context";
@@ -41,20 +42,20 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           <div className="mb-6 px-2 text-lg font-semibold">Platform Admin</div>
           <nav className="space-y-1">
             {PLATFORM_NAV.map((item) => (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
                 className="block rounded px-3 py-2 text-sm font-medium text-gray-200 hover:bg-gray-800"
               >
                 {item.label}
-              </a>
+              </Link>
             ))}
           </nav>
         </div>
         <div className="space-y-2 px-2">
-          <a href="/" className="block rounded px-3 py-2 text-sm font-medium text-gray-200 hover:bg-gray-800">
+          <Link href="/" className="block rounded px-3 py-2 text-sm font-medium text-gray-200 hover:bg-gray-800">
             Back to my factory
-          </a>
+          </Link>
           {user && <div className="truncate text-xs text-gray-400">{user.email}</div>}
           <button
             onClick={logout}
