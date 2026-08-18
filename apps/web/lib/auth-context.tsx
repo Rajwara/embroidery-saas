@@ -24,11 +24,15 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Synchronous initial read avoids a loading flash on first paint when a
-  // token already exists.
-  const [status, setStatus] = useState<Status>(() =>
-    getTokens()?.access_token ? "loading" : "unauthenticated"
-  );
+  // Always starts "loading" on both server and client. A lazy read of
+  // getTokens() here would diverge -- the server has no localStorage, so it
+  // would always see "unauthenticated" while a logged-in client's very
+  // first render (which runs the lazy initializer synchronously, before
+  // hydration completes) would see "loading" -- a guaranteed hydration
+  // mismatch on every dashboard page load for any authenticated user. The
+  // effect below is client-only (runs post-hydration) and resolves this to
+  // authenticated/unauthenticated once it's safe to read localStorage.
+  const [status, setStatus] = useState<Status>("loading");
   const [user, setUser] = useState<UserProfileResponse | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
 
@@ -49,6 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (getTokens()?.access_token) {
       loadProfile();
+    } else {
+      setStatus("unauthenticated");
     }
   }, [loadProfile]);
 
