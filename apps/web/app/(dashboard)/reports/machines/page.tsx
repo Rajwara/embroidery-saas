@@ -1,11 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AlertCircle } from "lucide-react";
 
 import { getMachineCostReport, listBranches } from "@embroidery/types";
 import type { BranchOut, MachineCostReportOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { CategoricalBarChart } from "@/components/CategoricalBarChart";
 
 function firstOfMonth(): string {
   const now = new Date();
@@ -55,37 +69,37 @@ export default function MachineCostReportPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Machine Cost Report</h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Overhead expenses for the period are split equally across active machines in scope.
           Revenue and profit aren&apos;t computed yet -- see the report notes below.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded bg-white p-4 shadow">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600">From</label>
+          <label className="block text-xs font-medium text-muted-foreground">From</label>
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600">To</label>
+          <label className="block text-xs font-medium text-muted-foreground">To</label>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600">Branch</label>
+          <label className="block text-xs font-medium text-muted-foreground">Branch</label>
           <select
             value={branchId}
             onChange={(e) => setBranchId(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="">All branches</option>
             {branches.map((branch) => (
@@ -98,58 +112,82 @@ export default function MachineCostReportPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && report === null && (
+        <div className="space-y-4">
+          <Skeleton className="h-20 w-full max-w-md rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
         </div>
       )}
 
-      {!error && report === null && <p className="text-sm text-gray-500">Loading report...</p>}
-
       {!error && report !== null && (
         <>
-          <div className="grid max-w-md grid-cols-2 gap-4 rounded bg-white p-4 text-sm shadow">
-            <div>
-              <p className="text-gray-500">Total overhead ({report.branch_id ? branchName(report.branch_id) : "all branches"})</p>
-              <p className="text-lg font-semibold">{report.total_overhead.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Active machines</p>
-              <p className="text-lg font-semibold">{report.active_machine_count}</p>
-            </div>
-          </div>
+          <Card className="max-w-md">
+            <CardContent className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">
+                  Total overhead ({report.branch_id ? branchName(report.branch_id) : "all branches"})
+                </p>
+                <p className="text-lg font-semibold tabular-nums">{report.total_overhead.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Active machines</p>
+                <p className="text-lg font-semibold tabular-nums">{report.active_machine_count}</p>
+              </div>
+            </CardContent>
+          </Card>
 
-          <table className="w-full rounded bg-white text-sm shadow">
-            <thead>
-              <tr className="border-b border-gray-200 text-left text-gray-500">
-                <th className="px-4 py-2 font-medium">Machine</th>
-                <th className="px-4 py-2 font-medium">Quantity produced</th>
-                <th className="px-4 py-2 font-medium">Overhead share</th>
-                <th className="px-4 py-2 font-medium">Cost per unit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.machines.map((machine) => (
-                <tr key={machine.machine_id} className="border-b border-gray-100 last:border-0">
-                  <td className="px-4 py-2">{machine.machine_name ?? machine.machine_code}</td>
-                  <td className="px-4 py-2">{machine.quantity_produced}</td>
-                  <td className="px-4 py-2">{machine.overhead_share.toFixed(2)}</td>
-                  <td className="px-4 py-2">
-                    {machine.cost_per_unit === null ? "—" : machine.cost_per_unit.toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-              {report.machines.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
-                    No active machines in scope.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          {report.machines.length > 0 && (
+            <CategoricalBarChart
+              data={report.machines.map((m) => ({
+                label: m.machine_name ?? m.machine_code,
+                value: m.overhead_share,
+              }))}
+              valueFormatter={(v) => v.toFixed(2)}
+            />
+          )}
+
+          <div className="rounded-xl border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Machine</TableHead>
+                  <TableHead className="text-right">Quantity produced</TableHead>
+                  <TableHead className="text-right">Overhead share</TableHead>
+                  <TableHead className="text-right">Cost per unit</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {report.machines.map((machine) => (
+                  <TableRow key={machine.machine_id}>
+                    <TableCell className="font-medium">{machine.machine_name ?? machine.machine_code}</TableCell>
+                    <TableCell className="text-right tabular-nums">{machine.quantity_produced}</TableCell>
+                    <TableCell className="text-right tabular-nums">{machine.overhead_share.toFixed(2)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {machine.cost_per_unit === null ? "—" : machine.cost_per_unit.toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {report.machines.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      No active machines in scope.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </>
       )}
     </div>

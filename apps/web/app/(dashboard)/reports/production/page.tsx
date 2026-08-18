@@ -2,11 +2,25 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { AlertCircle } from "lucide-react";
 
 import { getProductionSummaryReport, listBranches } from "@embroidery/types";
 import type { BranchOut, ProductionSummaryReportOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { CategoricalBarChart } from "@/components/CategoricalBarChart";
 
 function firstOfMonth(): string {
   const now = new Date();
@@ -54,34 +68,34 @@ export default function ProductionSummaryReportPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Production Summary</h1>
-        <p className="text-sm text-gray-500">Approved production quantity for the period, by component and by lot.</p>
+        <p className="text-sm text-muted-foreground">Approved production quantity for the period, by component and by lot.</p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded bg-white p-4 shadow">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600">From</label>
+          <label className="block text-xs font-medium text-muted-foreground">From</label>
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600">To</label>
+          <label className="block text-xs font-medium text-muted-foreground">To</label>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600">Branch</label>
+          <label className="block text-xs font-medium text-muted-foreground">Branch</label>
           <select
             value={branchId}
             onChange={(e) => setBranchId(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="">All branches</option>
             {branches.map((branch) => (
@@ -94,80 +108,103 @@ export default function ProductionSummaryReportPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && report === null && (
+        <div className="space-y-4">
+          <Skeleton className="h-20 w-full max-w-xs rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
         </div>
       )}
 
-      {!error && report === null && <p className="text-sm text-gray-500">Loading report...</p>}
-
       {!error && report !== null && (
         <>
-          <div className="max-w-xs rounded bg-white p-4 text-sm shadow">
-            <p className="text-gray-500">Total quantity produced</p>
-            <p className="text-lg font-semibold">{report.total_quantity}</p>
-          </div>
+          <Card className="max-w-xs">
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Total quantity produced</p>
+              <p className="text-lg font-semibold tabular-nums">{report.total_quantity.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+
+          {report.by_component.length > 0 && (
+            <CategoricalBarChart
+              data={report.by_component.map((row) => ({
+                label: row.component_type.charAt(0).toUpperCase() + row.component_type.slice(1),
+                value: row.quantity,
+              }))}
+            />
+          )}
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <h2 className="mb-2 text-sm font-semibold">By component</h2>
-              <table className="w-full rounded bg-white text-sm shadow">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-500">
-                    <th className="px-4 py-2 font-medium">Component</th>
-                    <th className="px-4 py-2 font-medium">Quantity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.by_component.map((row) => (
-                    <tr key={row.component_type} className="border-b border-gray-100 last:border-0">
-                      <td className="px-4 py-2 capitalize">{row.component_type}</td>
-                      <td className="px-4 py-2">{row.quantity}</td>
-                    </tr>
-                  ))}
-                  {report.by_component.length === 0 && (
-                    <tr>
-                      <td colSpan={2} className="px-4 py-6 text-center text-gray-500">
-                        No approved production in this period.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <div className="rounded-xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Component</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {report.by_component.map((row) => (
+                      <TableRow key={row.component_type}>
+                        <TableCell className="capitalize">{row.component_type}</TableCell>
+                        <TableCell className="text-right tabular-nums">{row.quantity}</TableCell>
+                      </TableRow>
+                    ))}
+                    {report.by_component.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-center text-muted-foreground">
+                          No approved production in this period.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
 
             <div>
               <h2 className="mb-2 text-sm font-semibold">By lot</h2>
-              <table className="w-full rounded bg-white text-sm shadow">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-500">
-                    <th className="px-4 py-2 font-medium">Lot</th>
-                    <th className="px-4 py-2 font-medium">Quantity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.by_lot.map((row) => (
-                    <tr key={row.lot_id} className="border-b border-gray-100 last:border-0">
-                      <td className="px-4 py-2">
-                        <Link href={`/lots/${row.lot_id}`} className="font-medium text-gray-900 underline">
-                          {row.lot_number}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2">{row.quantity}</td>
-                    </tr>
-                  ))}
-                  {report.by_lot.length === 0 && (
-                    <tr>
-                      <td colSpan={2} className="px-4 py-6 text-center text-gray-500">
-                        No approved production in this period.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <div className="rounded-xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Lot</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {report.by_lot.map((row) => (
+                      <TableRow key={row.lot_id}>
+                        <TableCell>
+                          <Link href={`/lots/${row.lot_id}`} className="font-medium text-foreground hover:underline">
+                            {row.lot_number}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{row.quantity}</TableCell>
+                      </TableRow>
+                    ))}
+                    {report.by_lot.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-center text-muted-foreground">
+                          No approved production in this period.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </div>
         </>

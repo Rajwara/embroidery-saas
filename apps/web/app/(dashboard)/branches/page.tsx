@@ -2,11 +2,25 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { AlertCircle, Loader2 } from "lucide-react";
+
 import { createBranch, listBranches, updateBranch } from "@embroidery/types";
 import type { BranchOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function BranchesPage() {
   const { hasPermission } = useAuth();
@@ -100,181 +114,190 @@ export default function BranchesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Branches</h1>
         {hasPermission("branches.create") && (
-          <button
-            onClick={() => setShowCreate((v) => !v)}
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white"
-          >
-            {showCreate ? "Cancel" : "New Branch"}
-          </button>
+          <Button onClick={() => setShowCreate((v) => !v)}>{showCreate ? "Cancel" : "New Branch"}</Button>
         )}
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="max-w-md space-y-4 rounded bg-white p-6 shadow">
+        <form onSubmit={handleCreate} className="max-w-md space-y-4 rounded-xl border bg-card p-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Name</label>
+              <label className="block text-sm font-medium text-muted-foreground">Name</label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Code</label>
+              <label className="block text-sm font-medium text-muted-foreground">Code</label>
               <input
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 required
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Address</label>
+            <label className="block text-sm font-medium text-muted-foreground">Address</label>
             <input
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">City</label>
+              <label className="block text-sm font-medium text-muted-foreground">City</label>
               <input
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Phone</label>
+              <label className="block text-sm font-medium text-muted-foreground">Phone</label>
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input type="checkbox" checked={isHeadOffice} onChange={(e) => setIsHeadOffice(e.target.checked)} />
             Head office
           </label>
 
-          {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+          {submitError && <p className="text-sm text-destructive">{submitError}</p>}
 
-          <div className="flex justify-end border-t border-gray-100 pt-4">
-            <button
-              type="submit"
-              disabled={submitting || !name || !code}
-              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
+          <div className="flex justify-end border-t pt-4">
+            <Button type="submit" disabled={submitting || !name || !code}>
+              {submitting && <Loader2 className="animate-spin" />}
               {submitting ? "Creating..." : "Create branch"}
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
-      {!error && branches === null && <p className="text-sm text-gray-500">Loading branches...</p>}
+      {!error && branches === null && (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
+      )}
 
       {!error && branches !== null && branches.length === 0 && (
-        <p className="text-sm text-gray-500">No branches found.</p>
+        <p className="text-sm text-muted-foreground">No branches found.</p>
       )}
 
       {!error && branches !== null && branches.length > 0 && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Code</th>
-              <th className="px-4 py-2 font-medium">City</th>
-              <th className="px-4 py-2 font-medium">Head office</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {branches.map((branch) => (
-              <tr key={branch.id} className="border-b border-gray-100 last:border-0">
-                {editingId === branch.id ? (
-                  <>
-                    <td className="px-4 py-2">
-                      <input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                      />
-                    </td>
-                    <td className="px-4 py-2">{branch.code}</td>
-                    <td className="px-4 py-2">
-                      <input
-                        value={editCity}
-                        onChange={(e) => setEditCity(e.target.value)}
-                        className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                      />
-                    </td>
-                    <td className="px-4 py-2">{branch.is_head_office ? "Yes" : "No"}</td>
-                    <td className="px-4 py-2">
-                      <label className="flex items-center gap-2">
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>City</TableHead>
+                <TableHead>Head office</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {branches.map((branch) => (
+                <TableRow key={branch.id}>
+                  {editingId === branch.id ? (
+                    <>
+                      <TableCell>
                         <input
-                          type="checkbox"
-                          checked={editIsActive}
-                          onChange={(e) => setEditIsActive(e.target.checked)}
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
                         />
-                        Active
-                      </label>
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => saveEdit(branch.id)}
-                          disabled={editSaving}
-                          className="text-xs font-medium text-gray-900 underline disabled:opacity-40"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="text-xs font-medium text-gray-500 underline"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="px-4 py-2">{branch.name}</td>
-                    <td className="px-4 py-2">{branch.code}</td>
-                    <td className="px-4 py-2">{branch.city ?? "—"}</td>
-                    <td className="px-4 py-2">{branch.is_head_office ? "Yes" : "No"}</td>
-                    <td className="px-4 py-2">{branch.is_active ? "Active" : "Inactive"}</td>
-                    <td className="px-4 py-2 text-right">
-                      {hasPermission("branches.edit") && (
-                        <button
-                          onClick={() => startEdit(branch)}
-                          className="text-xs font-medium text-gray-700 underline"
-                        >
-                          Edit
-                        </button>
-                      )}
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{branch.code}</TableCell>
+                      <TableCell>
+                        <input
+                          value={editCity}
+                          onChange={(e) => setEditCity(e.target.value)}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                        />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{branch.is_head_office ? "Yes" : "No"}</TableCell>
+                      <TableCell>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={editIsActive}
+                            onChange={(e) => setEditIsActive(e.target.checked)}
+                          />
+                          Active
+                        </label>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-3">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0"
+                            onClick={() => saveEdit(branch.id)}
+                            disabled={editSaving}
+                          >
+                            {editSaving && <Loader2 className="animate-spin" />}
+                            Save
+                          </Button>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-muted-foreground"
+                            onClick={() => setEditingId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell className="font-medium">{branch.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{branch.code}</TableCell>
+                      <TableCell className="text-muted-foreground">{branch.city ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{branch.is_head_office ? "Yes" : "No"}</TableCell>
+                      <TableCell>
+                        <Badge variant={branch.is_active ? "success" : "secondary"}>
+                          {branch.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {hasPermission("branches.edit") && (
+                          <Button variant="link" size="sm" className="h-auto p-0" onClick={() => startEdit(branch)}>
+                            Edit
+                          </Button>
+                        )}
+                      </TableCell>
+                    </>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );

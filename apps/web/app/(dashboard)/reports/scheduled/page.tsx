@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { AlertCircle, Loader2 } from "lucide-react";
+
 import {
   createScheduledReport,
   deleteScheduledReport,
@@ -13,6 +15,18 @@ import type { BranchOut, ScheduledReportSettingOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
   financial_summary: "Financial Summary",
@@ -100,101 +114,125 @@ export default function ScheduledReportsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Scheduled Reports</h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Have a report emailed automatically. Weekly reports send every Monday for the prior week; monthly
           reports send on the 1st for the prior calendar month.
         </p>
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && settings === null && (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
         </div>
       )}
 
-      {!error && settings === null && <p className="text-sm text-gray-500">Loading...</p>}
-
       {!error && settings !== null && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Report</th>
-              <th className="px-4 py-2 font-medium">Frequency</th>
-              <th className="px-4 py-2 font-medium">Branch</th>
-              <th className="px-4 py-2 font-medium">Recipient</th>
-              <th className="px-4 py-2 font-medium">Last sent</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {settings.map((setting) => (
-              <tr key={setting.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">{REPORT_TYPE_LABELS[setting.report_type] ?? setting.report_type}</td>
-                <td className="px-4 py-2 capitalize">{setting.frequency}</td>
-                <td className="px-4 py-2">{branchName(setting.branch_id)}</td>
-                <td className="px-4 py-2">{setting.recipient_email}</td>
-                <td className="px-4 py-2">{setting.last_sent_at ? setting.last_sent_at.slice(0, 10) : "Never"}</td>
-                <td className="px-4 py-2">{setting.is_active ? "Active" : "Paused"}</td>
-                <td className="px-4 py-2 text-right">
-                  {hasPermission("reports.export") && (
-                    <div className="flex justify-end gap-3">
-                      <button onClick={() => toggleActive(setting)} className="text-xs font-medium text-gray-700 underline">
-                        {setting.is_active ? "Pause" : "Resume"}
-                      </button>
-                      <button onClick={() => handleDelete(setting)} className="text-xs font-medium text-red-600 underline">
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {settings.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
-                  No scheduled reports yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Report</TableHead>
+                <TableHead>Frequency</TableHead>
+                <TableHead>Branch</TableHead>
+                <TableHead>Recipient</TableHead>
+                <TableHead>Last sent</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {settings.map((setting) => (
+                <TableRow key={setting.id}>
+                  <TableCell className="font-medium">
+                    {REPORT_TYPE_LABELS[setting.report_type] ?? setting.report_type}
+                  </TableCell>
+                  <TableCell className="capitalize text-muted-foreground">{setting.frequency}</TableCell>
+                  <TableCell className="text-muted-foreground">{branchName(setting.branch_id)}</TableCell>
+                  <TableCell className="text-muted-foreground">{setting.recipient_email}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {setting.last_sent_at ? setting.last_sent_at.slice(0, 10) : "Never"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={setting.is_active ? "success" : "secondary"}>
+                      {setting.is_active ? "Active" : "Paused"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {hasPermission("reports.export") && (
+                      <div className="flex justify-end gap-3">
+                        <Button variant="link" size="sm" className="h-auto p-0" onClick={() => toggleActive(setting)}>
+                          {setting.is_active ? "Pause" : "Resume"}
+                        </Button>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-destructive"
+                          onClick={() => handleDelete(setting)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {settings.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    No scheduled reports yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {hasPermission("reports.export") && (
-        <form onSubmit={handleCreate} className="max-w-md space-y-4 rounded bg-white p-6 shadow">
+        <form onSubmit={handleCreate} className="max-w-md space-y-4 rounded-xl border bg-card p-6">
           <h2 className="text-sm font-semibold">Schedule a report</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Report</label>
+            <label className="block text-sm font-medium text-muted-foreground">Report</label>
             <select
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="financial_summary">Financial Summary</option>
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Frequency</label>
+              <label className="block text-sm font-medium text-muted-foreground">Frequency</label>
               <select
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="weekly">Weekly (Mondays)</option>
                 <option value="monthly">Monthly (1st)</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Branch</label>
+              <label className="block text-sm font-medium text-muted-foreground">Branch</label>
               <select
                 value={branchId}
                 onChange={(e) => setBranchId(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">All branches</option>
                 {branches.map((branch) => (
@@ -206,26 +244,23 @@ export default function ScheduledReportsPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Recipient email</label>
+            <label className="block text-sm font-medium text-muted-foreground">Recipient email</label>
             <input
               type="email"
               value={recipientEmail}
               onChange={(e) => setRecipientEmail(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
 
-          {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+          {submitError && <p className="text-sm text-destructive">{submitError}</p>}
 
-          <div className="flex justify-end border-t border-gray-100 pt-4">
-            <button
-              type="submit"
-              disabled={submitting || !recipientEmail}
-              className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
+          <div className="flex justify-end border-t pt-4">
+            <Button type="submit" disabled={submitting || !recipientEmail}>
+              {submitting && <Loader2 className="animate-spin" />}
               {submitting ? "Scheduling..." : "Schedule report"}
-            </button>
+            </Button>
           </div>
         </form>
       )}
