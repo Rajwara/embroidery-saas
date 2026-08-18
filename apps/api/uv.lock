@@ -413,7 +413,7 @@ requires-dist = [
     { name = "bcrypt", specifier = "<4.1" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.1" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
     { name = "pydantic-settings", specifier = ">=2.4" },
     { name = "pyotp", specifier = ">=2.9" },
     { name = "python-jose", extras = ["cryptography"], specifier = ">=3.3" },
