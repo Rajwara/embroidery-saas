@@ -2,10 +2,24 @@
 
 import { useCallback, useEffect, useState, use } from "react";
 
+import { AlertCircle } from "lucide-react";
+
 import { getPayment, listParties } from "@embroidery/types";
 import type { Party, PaymentDetailOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const METHOD_LABELS: Record<string, string> = {
   cash: "Cash",
@@ -50,48 +64,65 @@ export default function PaymentDetailPage(props: { params: Promise<{ id: string 
 
   if (error) {
     return (
-      <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-        <span>{error}</span>
-        <button onClick={load} className="font-medium underline">
-          Retry
-        </button>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertTitle>{error}</AlertTitle>
+        <AlertDescription>
+          <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   if (payment === null) {
-    return <p className="text-sm text-gray-500">Loading payment...</p>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-80" />
+        </div>
+        <Skeleton className="h-32 w-full rounded-xl" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">{payment.payment_number}</h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {partyName ?? "—"} &middot; {payment.payment_date} &middot;{" "}
           {METHOD_LABELS[payment.payment_method] ?? payment.payment_method} &middot; {payment.amount.toFixed(2)}
         </p>
-        {payment.notes && <p className="mt-1 text-sm text-gray-500">{payment.notes}</p>}
+        {payment.notes && <p className="mt-1 text-sm text-muted-foreground">{payment.notes}</p>}
       </div>
 
-      <table className="w-full rounded bg-white text-sm shadow">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-gray-500">
-            <th className="px-4 py-2 font-medium">Type</th>
-            <th className="px-4 py-2 font-medium">Invoice</th>
-            <th className="px-4 py-2 font-medium">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {payment.allocations.map((allocation) => (
-            <tr key={allocation.id} className="border-b border-gray-100 last:border-0">
-              <td className="px-4 py-2">{ALLOCATION_TYPE_LABELS[allocation.allocation_type] ?? allocation.allocation_type}</td>
-              <td className="px-4 py-2">{allocation.invoice_number ?? "—"}</td>
-              <td className="px-4 py-2">{allocation.amount.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Type</TableHead>
+              <TableHead>Invoice</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {payment.allocations.map((allocation) => (
+              <TableRow key={allocation.id}>
+                <TableCell>
+                  <Badge variant={allocation.allocation_type === "invoice" ? "default" : "secondary"}>
+                    {ALLOCATION_TYPE_LABELS[allocation.allocation_type] ?? allocation.allocation_type}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{allocation.invoice_number ?? "—"}</TableCell>
+                <TableCell className="text-right tabular-nums">{allocation.amount.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

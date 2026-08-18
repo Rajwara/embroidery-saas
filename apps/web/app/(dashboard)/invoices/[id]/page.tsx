@@ -2,10 +2,24 @@
 
 import { useCallback, useEffect, useState, use } from "react";
 
+import { AlertCircle, Loader2, Printer } from "lucide-react";
+
 import { getInvoice, listParties } from "@embroidery/types";
-import type { InvoiceDetailOut, Party } from "@embroidery/types";
+import type { InvoiceDetailOut } from "@embroidery/types";
 
 import { ApiError, fetchPdfBlob } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const PRICING_LABELS: Record<string, string> = {
   per_suit: "Per suit",
@@ -58,17 +72,28 @@ export default function InvoiceDetailPage(props: { params: Promise<{ id: string 
 
   if (error) {
     return (
-      <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-        <span>{error}</span>
-        <button onClick={load} className="font-medium underline">
-          Retry
-        </button>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertTitle>{error}</AlertTitle>
+        <AlertDescription>
+          <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   if (invoice === null) {
-    return <p className="text-sm text-gray-500">Loading invoice...</p>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    );
   }
 
   return (
@@ -76,52 +101,55 @@ export default function InvoiceDetailPage(props: { params: Promise<{ id: string 
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{invoice.invoice_number}</h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {partyName ?? "—"} &middot; {invoice.invoice_date}
             {invoice.due_date && <> &middot; due {invoice.due_date}</>}
           </p>
-          {invoice.notes && <p className="mt-1 text-sm text-gray-500">{invoice.notes}</p>}
+          {invoice.notes && <p className="mt-1 text-sm text-muted-foreground">{invoice.notes}</p>}
         </div>
         <div className="text-right">
-          <button
-            onClick={handlePrint}
-            disabled={printing}
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-          >
+          <Button onClick={handlePrint} disabled={printing}>
+            {printing ? <Loader2 className="animate-spin" /> : <Printer />}
             {printing ? "Generating..." : "Print"}
-          </button>
-          {printError && <p className="mt-1 text-xs text-red-600">{printError}</p>}
+          </Button>
+          {printError && <p className="mt-1 text-xs text-destructive">{printError}</p>}
         </div>
       </div>
 
-      <table className="w-full rounded bg-white text-sm shadow">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-gray-500">
-            <th className="px-4 py-2 font-medium">Description</th>
-            <th className="px-4 py-2 font-medium">Pricing</th>
-            <th className="px-4 py-2 font-medium">Qty</th>
-            <th className="px-4 py-2 font-medium">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {invoice.lines.map((line) => (
-            <tr key={line.id} className="border-b border-gray-100 last:border-0">
-              <td className="px-4 py-2">{line.description}</td>
-              <td className="px-4 py-2">{PRICING_LABELS[line.pricing_type] ?? line.pricing_type}</td>
-              <td className="px-4 py-2">{line.quantity}</td>
-              <td className="px-4 py-2">{line.line_total.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={3} className="px-4 py-2 text-right font-semibold">
-              Total
-            </td>
-            <td className="px-4 py-2 font-semibold">{invoice.total_amount.toFixed(2)}</td>
-          </tr>
-        </tfoot>
-      </table>
+      <div className="rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Description</TableHead>
+              <TableHead>Pricing</TableHead>
+              <TableHead className="text-right">Qty</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invoice.lines.map((line) => (
+              <TableRow key={line.id}>
+                <TableCell>{line.description}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {PRICING_LABELS[line.pricing_type] ?? line.pricing_type}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{line.quantity}</TableCell>
+                <TableCell className="text-right tabular-nums">{line.line_total.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={3} className="text-right font-semibold">
+                Total
+              </TableCell>
+              <TableCell className="text-right font-semibold tabular-nums">
+                {invoice.total_amount.toFixed(2)}
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
     </div>
   );
 }

@@ -2,12 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { AlertCircle, ShoppingCart } from "lucide-react";
 
 import { listPurchases, listSuppliers } from "@embroidery/types";
 import type { PurchaseOut, Supplier } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function PurchasesPage() {
   const { hasPermission } = useAuth();
@@ -43,56 +55,95 @@ export default function PurchasesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Purchases</h1>
         {hasPermission("purchases.create") && (
-          <Link
-            href="/purchases/new"
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white"
-          >
-            New Purchase
-          </Link>
+          <Button render={<Link href="/purchases/new" />}>New Purchase</Button>
         )}
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && purchases === null && <PurchasesTableSkeleton />}
+
+      {!error && purchases !== null && purchases.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <ShoppingCart className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No purchases yet</p>
+          <p className="text-sm text-muted-foreground">Purchases you record will show up here.</p>
         </div>
       )}
 
-      {!error && purchases === null && <p className="text-sm text-gray-500">Loading purchases...</p>}
-
-      {!error && purchases !== null && purchases.length === 0 && (
-        <p className="text-sm text-gray-500">No purchases found.</p>
-      )}
-
       {!error && purchases !== null && purchases.length > 0 && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Purchase #</th>
-              <th className="px-4 py-2 font-medium">Supplier</th>
-              <th className="px-4 py-2 font-medium">Date</th>
-              <th className="px-4 py-2 font-medium">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {purchases.map((purchase) => (
-              <tr key={purchase.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">
-                  <Link href={`/purchases/${purchase.id}`} className="font-medium text-gray-900 underline">
-                    {purchase.purchase_number}
-                  </Link>
-                </td>
-                <td className="px-4 py-2">{supplierName(purchase.supplier_id)}</td>
-                <td className="px-4 py-2">{purchase.purchase_date}</td>
-                <td className="px-4 py-2">{purchase.total_amount.toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Purchase #</TableHead>
+                <TableHead>Supplier</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {purchases.map((purchase) => (
+                <TableRow key={purchase.id}>
+                  <TableCell>
+                    <Link href={`/purchases/${purchase.id}`} className="font-medium text-foreground hover:underline">
+                      {purchase.purchase_number}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{supplierName(purchase.supplier_id)}</TableCell>
+                  <TableCell className="text-muted-foreground">{purchase.purchase_date}</TableCell>
+                  <TableCell className="text-right tabular-nums">{purchase.total_amount.toFixed(2)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
+    </div>
+  );
+}
+
+function PurchasesTableSkeleton() {
+  return (
+    <div className="rounded-xl border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Purchase #</TableHead>
+            <TableHead>Supplier</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-28" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
+              </TableCell>
+              <TableCell className="text-right">
+                <Skeleton className="ml-auto h-4 w-16" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

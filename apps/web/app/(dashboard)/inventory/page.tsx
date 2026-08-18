@@ -2,12 +2,26 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { AlertCircle, AlertTriangle, Boxes, Package } from "lucide-react";
 
 import { listInventoryItems } from "@embroidery/types";
 import type { InventoryItemOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function InventoryPage() {
   const { hasPermission } = useAuth();
@@ -41,77 +55,107 @@ export default function InventoryPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Inventory</h1>
         {hasPermission("inventory.create") && (
-          <Link
-            href="/inventory/new"
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white"
-          >
-            New Item
-          </Link>
+          <Button render={<Link href="/inventory/new" />}>New Item</Button>
         )}
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>{error}</span>
-          <button onClick={load} className="font-medium underline">
-            Retry
-          </button>
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>{error}</AlertTitle>
+          <AlertDescription>
+            <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!error && items === null && (
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
         </div>
       )}
 
-      {!error && items === null && <p className="text-sm text-gray-500">Loading inventory...</p>}
-
       {!error && items !== null && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="rounded bg-white p-4 shadow">
-            <div className="text-sm text-gray-500">Total items</div>
-            <div className="text-2xl font-semibold">{items.length}</div>
-          </div>
-          <button
-            onClick={() => setShowLowStockOnly((v) => !v)}
-            className={`rounded p-4 text-left shadow ${lowStockCount > 0 ? "bg-red-50" : "bg-white"}`}
-          >
-            <div className="text-sm text-gray-500">Below threshold {showLowStockOnly ? "(showing)" : ""}</div>
-            <div className={`text-2xl font-semibold ${lowStockCount > 0 ? "text-red-700" : ""}`}>
-              {lowStockCount}
-            </div>
+          <Card>
+            <CardContent className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total items</p>
+                <p className="text-2xl font-semibold tabular-nums">{items.length}</p>
+              </div>
+              <Boxes className="size-5 text-muted-foreground" />
+            </CardContent>
+          </Card>
+          <button onClick={() => setShowLowStockOnly((v) => !v)} className="text-left">
+            <Card
+              className={lowStockCount > 0 ? "ring-1 ring-inset ring-amber-600/30" : undefined}
+            >
+              <CardContent className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Below threshold {showLowStockOnly ? "(showing)" : ""}
+                  </p>
+                  <p className={`text-2xl font-semibold tabular-nums ${lowStockCount > 0 ? "text-amber-700" : ""}`}>
+                    {lowStockCount}
+                  </p>
+                </div>
+                <AlertTriangle className={`size-5 ${lowStockCount > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
+              </CardContent>
+            </Card>
           </button>
         </div>
       )}
 
       {!error && items !== null && visibleItems.length === 0 && (
-        <p className="text-sm text-gray-500">No inventory items found.</p>
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <Package className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No inventory items</p>
+          <p className="text-sm text-muted-foreground">
+            {showLowStockOnly ? "Nothing is below threshold." : "Items you add will show up here."}
+          </p>
+        </div>
       )}
 
       {!error && items !== null && visibleItems.length > 0 && (
-        <table className="w-full rounded bg-white text-sm shadow">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Category</th>
-              <th className="px-4 py-2 font-medium">Stock</th>
-              <th className="px-4 py-2 font-medium">Threshold</th>
-              <th className="px-4 py-2 font-medium">Unit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleItems.map((item) => (
-              <tr key={item.id} className="border-b border-gray-100 last:border-0">
-                <td className="px-4 py-2">
-                  <Link href={`/inventory/${item.id}`} className="font-medium text-gray-900 underline">
-                    {item.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-2">{item.category ?? "—"}</td>
-                <td className={`px-4 py-2 ${item.is_below_threshold ? "font-semibold text-red-700" : ""}`}>
-                  {item.current_stock}
-                </td>
-                <td className="px-4 py-2">{item.minimum_threshold}</td>
-                <td className="px-4 py-2">{item.unit}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">Stock</TableHead>
+                <TableHead className="text-right">Threshold</TableHead>
+                <TableHead>Unit</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleItems.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <Link href={`/inventory/${item.id}`} className="font-medium text-foreground hover:underline">
+                      {item.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{item.category ?? "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {item.is_below_threshold ? (
+                      <Badge variant="warning">{item.current_stock}</Badge>
+                    ) : (
+                      item.current_stock
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground">
+                    {item.minimum_threshold}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{item.unit}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );

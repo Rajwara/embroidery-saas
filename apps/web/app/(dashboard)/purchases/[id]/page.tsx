@@ -2,10 +2,24 @@
 
 import { useCallback, useEffect, useState, use } from "react";
 
+import { AlertCircle } from "lucide-react";
+
 import { getPurchase, listSuppliers } from "@embroidery/types";
 import type { PurchaseDetailOut, Supplier } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function PurchaseDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
@@ -36,57 +50,72 @@ export default function PurchaseDetailPage(props: { params: Promise<{ id: string
 
   if (error) {
     return (
-      <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-        <span>{error}</span>
-        <button onClick={load} className="font-medium underline">
-          Retry
-        </button>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertTitle>{error}</AlertTitle>
+        <AlertDescription>
+          <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   if (purchase === null) {
-    return <p className="text-sm text-gray-500">Loading purchase...</p>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">{purchase.purchase_number}</h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {supplierName ?? "—"} &middot; {purchase.purchase_date}
         </p>
-        {purchase.notes && <p className="mt-1 text-sm text-gray-500">{purchase.notes}</p>}
+        {purchase.notes && <p className="mt-1 text-sm text-muted-foreground">{purchase.notes}</p>}
       </div>
 
-      <table className="w-full rounded bg-white text-sm shadow">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-gray-500">
-            <th className="px-4 py-2 font-medium">Description</th>
-            <th className="px-4 py-2 font-medium">Qty</th>
-            <th className="px-4 py-2 font-medium">Unit price</th>
-            <th className="px-4 py-2 font-medium">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {purchase.lines.map((line) => (
-            <tr key={line.id} className="border-b border-gray-100 last:border-0">
-              <td className="px-4 py-2">{line.description}</td>
-              <td className="px-4 py-2">{line.quantity}</td>
-              <td className="px-4 py-2">{line.unit_price.toFixed(2)}</td>
-              <td className="px-4 py-2">{line.line_total.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={3} className="px-4 py-2 text-right font-semibold">
-              Total
-            </td>
-            <td className="px-4 py-2 font-semibold">{purchase.total_amount.toFixed(2)}</td>
-          </tr>
-        </tfoot>
-      </table>
+      <div className="rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Description</TableHead>
+              <TableHead className="text-right">Qty</TableHead>
+              <TableHead className="text-right">Unit price</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {purchase.lines.map((line) => (
+              <TableRow key={line.id}>
+                <TableCell>{line.description}</TableCell>
+                <TableCell className="text-right tabular-nums">{line.quantity}</TableCell>
+                <TableCell className="text-right tabular-nums">{line.unit_price.toFixed(2)}</TableCell>
+                <TableCell className="text-right tabular-nums">{line.line_total.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={3} className="text-right font-semibold">
+                Total
+              </TableCell>
+              <TableCell className="text-right font-semibold tabular-nums">
+                {purchase.total_amount.toFixed(2)}
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
     </div>
   );
 }

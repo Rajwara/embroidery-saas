@@ -2,10 +2,24 @@
 
 import { useCallback, useEffect, useState, use } from "react";
 
+import { AlertCircle, History } from "lucide-react";
+
 import { getInventoryItem, listStockTransactions } from "@embroidery/types";
 import type { InventoryItemOut, StockTransactionOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import { AddTransactionForm } from "./_components/AddTransactionForm";
 
@@ -50,17 +64,28 @@ export default function InventoryItemDetailPage(props: { params: Promise<{ id: s
 
   if (error) {
     return (
-      <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
-        <span>{error}</span>
-        <button onClick={load} className="font-medium underline">
-          Retry
-        </button>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertTitle>{error}</AlertTitle>
+        <AlertDescription>
+          <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   if (item === null) {
-    return <p className="text-sm text-gray-500">Loading item...</p>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-56" />
+        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
   }
 
   return (
@@ -68,47 +93,68 @@ export default function InventoryItemDetailPage(props: { params: Promise<{ id: s
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{item.name}</h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {item.category ?? "—"} &middot; unit: {item.unit}
           </p>
-          {item.notes && <p className="mt-1 text-sm text-gray-500">{item.notes}</p>}
+          {item.notes && <p className="mt-1 text-sm text-muted-foreground">{item.notes}</p>}
         </div>
         <div className="text-right">
-          <div className={`text-2xl font-semibold ${item.is_below_threshold ? "text-red-700" : ""}`}>
-            {item.current_stock} {item.unit}
-          </div>
-          <div className="text-xs text-gray-500">threshold: {item.minimum_threshold}</div>
+          {item.is_below_threshold ? (
+            <Badge variant="warning" className="h-auto px-2 py-1 text-base font-semibold">
+              {item.current_stock} {item.unit}
+            </Badge>
+          ) : (
+            <div className="text-2xl font-semibold tabular-nums">
+              {item.current_stock} {item.unit}
+            </div>
+          )}
+          <div className="text-xs text-muted-foreground">threshold: {item.minimum_threshold}</div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
         <div className="space-y-2">
           <h2 className="text-lg font-semibold">Transaction history</h2>
-          {transactions === null && <p className="text-sm text-gray-500">Loading...</p>}
+          {transactions === null && (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          )}
           {transactions !== null && transactions.length === 0 && (
-            <p className="text-sm text-gray-500">No transactions yet.</p>
+            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-10 text-center">
+              <History className="size-6 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">No transactions yet.</p>
+            </div>
           )}
           {transactions !== null && transactions.length > 0 && (
-            <table className="w-full rounded bg-white text-sm shadow">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Qty</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((t) => (
-                  <tr key={t.id} className="border-b border-gray-100 last:border-0">
-                    <td className="px-3 py-2">{t.transaction_date}</td>
-                    <td className="px-3 py-2">{TRANSACTION_TYPE_LABELS[t.transaction_type] ?? t.transaction_type}</td>
-                    <td className={`px-3 py-2 ${t.quantity < 0 ? "text-red-700" : "text-green-700"}`}>
-                      {t.quantity > 0 ? `+${t.quantity}` : t.quantity}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="rounded-xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="text-muted-foreground">{t.transaction_date}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {TRANSACTION_TYPE_LABELS[t.transaction_type] ?? t.transaction_type}
+                      </TableCell>
+                      <TableCell
+                        className={`text-right font-medium tabular-nums ${t.quantity < 0 ? "text-destructive" : "text-emerald-700"}`}
+                      >
+                        {t.quantity > 0 ? `+${t.quantity}` : t.quantity}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </div>
 
