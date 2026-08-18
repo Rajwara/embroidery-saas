@@ -9,5 +9,13 @@
   "devDependencies": {
     "turbo": "^2.1.0"
   },
-  "packageManager": "pnpm@9.9.0"
+  "packageManager": "pnpm@9.9.0",
+  "pnpm": {
+    "overrides": {
+      "glob": ">=10.5.0",
+      "lodash": ">=4.18.0",
+      "js-yaml": ">=4.3.1",
+      "postcss": ">=8.5.23"
+    }
+  }
 }
