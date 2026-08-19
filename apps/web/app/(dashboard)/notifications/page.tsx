@@ -77,7 +77,7 @@ export default function NotificationsCentrePage() {
             key: "payroll",
             title: "Payroll runs pending approval",
             count: rows.filter((run) => run.status === "draft").length,
-            href: "/approvals",
+            href: "/payroll",
             tone: "neutral" as const,
           }))
           .catch(() => null)

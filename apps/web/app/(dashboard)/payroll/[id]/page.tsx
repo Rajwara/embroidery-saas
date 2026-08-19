@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, use } from "react";
+import Link from "next/link";
 
 import { AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -272,7 +273,12 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
             {run.entries.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  No entries in this payroll run.
+                  No entries in this payroll run. Only active employees with a salary profile are
+                  included when a run is created --{" "}
+                  <Link href="/payroll/salary-profiles" className="underline">
+                    set one up
+                  </Link>{" "}
+                  and create a new run for this branch and period.
                 </TableCell>
               </TableRow>
             )}
@@ -280,7 +286,7 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
         </Table>
       </div>
 
-      {isDraft && hasPermission("payroll.create") && (
+      {isDraft && run.entries.length > 0 && hasPermission("payroll.create") && (
         <form onSubmit={handleAddAdjustment} className="space-y-4 rounded-xl border bg-card p-6">
           <h2 className="text-sm font-semibold">Add bonus, deduction, or advance recovery</h2>
           <div className="grid grid-cols-2 gap-4">
