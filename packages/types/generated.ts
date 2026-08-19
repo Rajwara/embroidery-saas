@@ -1462,6 +1462,17 @@ export interface ProductionByLotRowOut {
   quantity: number;
 }
 
+/**
+ * Counts by status over an optional entry_date range -- a real GROUP BY
+query, not derived from a capped list fetch, so it stays accurate
+regardless of how many entries exist in the period.
+ */
+export interface ProductionEntryStatusCountsOut {
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
 export interface ProductionJobComponentWithAllocationsOut {
   id: string;
   production_job_id: string;
@@ -2147,6 +2158,11 @@ end_date?: string | null;
 };
 
 export type GetEmployeePerformanceParams = {
+start_date?: string | null;
+end_date?: string | null;
+};
+
+export type GetProductionEntryStatusCountsParams = {
 start_date?: string | null;
 end_date?: string | null;
 };
@@ -4120,6 +4136,37 @@ export const getGetEmployeePerformanceUrl = (params?: GetEmployeePerformancePara
 export const getEmployeePerformance = async (params?: GetEmployeePerformanceParams, options?: RequestInit): Promise<EmployeePerformanceOut[]> => {
   
   return apiMutator<EmployeePerformanceOut[]>(getGetEmployeePerformanceUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Production Entry Status Counts
+ */
+export const getGetProductionEntryStatusCountsUrl = (params?: GetProductionEntryStatusCountsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/production-entries/status-counts?${stringifiedParams}` : `/production-entries/status-counts`
+}
+
+export const getProductionEntryStatusCounts = async (params?: GetProductionEntryStatusCountsParams, options?: RequestInit): Promise<ProductionEntryStatusCountsOut> => {
+  
+  return apiMutator<ProductionEntryStatusCountsOut>(getGetProductionEntryStatusCountsUrl(params),
   {      
     ...options,
     method: 'GET'

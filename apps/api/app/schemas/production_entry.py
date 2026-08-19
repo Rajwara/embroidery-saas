@@ -62,6 +62,16 @@ class MachinePerformanceOut(BaseModel):
     percentage_of_total: float
 
 
+class ProductionEntryStatusCountsOut(BaseModel):
+    """Counts by status over an optional entry_date range -- a real GROUP BY
+    query, not derived from a capped list fetch, so it stays accurate
+    regardless of how many entries exist in the period."""
+
+    pending: int
+    approved: int
+    rejected: int
+
+
 class EmployeePerformanceOut(BaseModel):
     """One employee's share of total approved production over the queried
     date range. total_quantity credits an employee for entries where they

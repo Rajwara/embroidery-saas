@@ -21,6 +21,7 @@ from app.schemas.production_entry import (
     MachinePerformanceOut,
     MachineProductionEntryCreateRequest,
     MachineProductionEntryOut,
+    ProductionEntryStatusCountsOut,
     RejectEntryRequest,
 )
 
@@ -233,6 +234,35 @@ def get_employee_performance(
     ]
     results.sort(key=lambda r: r.total_quantity, reverse=True)
     return results
+
+
+@router.get(
+    "/status-counts", response_model=ProductionEntryStatusCountsOut, operation_id="getProductionEntryStatusCounts"
+)
+def get_production_entry_status_counts(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("production_entries.view")),
+) -> ProductionEntryStatusCountsOut:
+    filters = []
+    if start_date:
+        filters.append(MachineProductionEntry.entry_date >= start_date)
+    if end_date:
+        filters.append(MachineProductionEntry.entry_date <= end_date)
+
+    rows = (
+        db.query(MachineProductionEntry.status, func.count(MachineProductionEntry.id))
+        .filter(*filters)
+        .group_by(MachineProductionEntry.status)
+        .all()
+    )
+    counts = {status_value: count for status_value, count in rows}
+    return ProductionEntryStatusCountsOut(
+        pending=counts.get("pending", 0),
+        approved=counts.get("approved", 0),
+        rejected=counts.get("rejected", 0),
+    )
 
 
 @router.post(
