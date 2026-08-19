@@ -58,12 +58,12 @@ export default function NotificationsCentrePage() {
 
     if (hasPermission("inventory.edit")) {
       jobs.push(
-        listPurchaseRequired({ status: "pending_approval" })
+        listPurchaseRequired({ open_only: true })
           .then((rows) => ({
             key: "purchase-required",
-            title: "Reorder requests pending approval",
+            title: "Reorder requests needing action",
             count: rows.length,
-            href: "/approvals",
+            href: "/purchase-required",
             tone: "neutral" as const,
           }))
           .catch(() => null)

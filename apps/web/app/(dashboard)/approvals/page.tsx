@@ -41,6 +41,28 @@ const STATUS_BADGE_VARIANT: Record<string, "warning" | "success" | "destructive"
   rejected: "destructive",
 };
 
+// PurchaseRequired's 6-stage pipeline (purchase_required -> pending_approval
+// -> approved -> ordered -> purchased -> received). This section shows every
+// open (non-"received") row, not just the "pending_approval" stage -- a
+// request doesn't stop needing attention just because it moved past that one
+// stage, and advancePurchaseRequired() is a generic "move to next stage"
+// call regardless of which stage it's currently at.
+const REORDER_STATUS_LABELS: Record<string, string> = {
+  purchase_required: "Reorder Needed",
+  pending_approval: "Pending Approval",
+  approved: "Approved",
+  ordered: "Ordered",
+  purchased: "Purchased",
+};
+
+const REORDER_ACTION_LABELS: Record<string, string> = {
+  purchase_required: "Advance",
+  pending_approval: "Approve",
+  approved: "Advance",
+  ordered: "Advance",
+  purchased: "Mark received",
+};
+
 function currentMonthRange(): { start_date: string; end_date: string } {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -322,13 +344,13 @@ function PurchaseRequiredSection() {
   const load = useCallback(() => {
     setError(null);
     setRows(null);
-    listPurchaseRequired({ status: "pending_approval" })
+    listPurchaseRequired({ open_only: true })
       .then(setRows)
       .catch((err) => {
         if (err instanceof ApiError && err.status === 403) {
           setError("You don't have permission to view reorder requests.");
         } else {
-          setError("Could not load pending reorder requests.");
+          setError("Could not load reorder requests.");
         }
       });
   }, []);
@@ -356,7 +378,7 @@ function PurchaseRequiredSection() {
 
       {!error && rows === null && <p className="text-sm text-gray-500">Loading...</p>}
       {!error && rows !== null && rows.length === 0 && (
-        <p className="text-sm text-gray-500">No reorder requests pending approval.</p>
+        <p className="text-sm text-gray-500">No open reorder requests.</p>
       )}
 
       {!error && rows !== null && rows.length > 0 && (
@@ -374,7 +396,7 @@ function PurchaseRequiredRow({ row, onResolved }: { row: PurchaseRequiredOut; on
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleApprove = async () => {
+  const handleAdvance = async () => {
     setActionError(null);
     setSubmitting(true);
     try {
@@ -389,17 +411,18 @@ function PurchaseRequiredRow({ row, onResolved }: { row: PurchaseRequiredOut; on
   return (
     <div className="rounded bg-white p-4 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm">
+        <div className="flex items-center gap-2 text-sm">
+          <Badge variant="secondary">{REORDER_STATUS_LABELS[row.status] ?? row.status}</Badge>
           <span className="font-medium">{row.item_name}</span> &middot; requested {row.requested_quantity}{" "}
           {row.item_unit} &middot; current stock {row.current_stock} {row.item_unit}
         </div>
         <button
           type="button"
-          onClick={handleApprove}
+          onClick={handleAdvance}
           disabled={submitting}
           className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {submitting ? "..." : "Approve"}
+          {submitting ? "..." : REORDER_ACTION_LABELS[row.status] ?? "Advance"}
         </button>
       </div>
       {row.notes && <p className="mt-1 text-xs text-gray-500">{row.notes}</p>}
