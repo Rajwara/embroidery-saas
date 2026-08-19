@@ -1,14 +1,37 @@
-export interface NavItem {
+export interface NavLeaf {
   label: string;
   href: string;
   requiredPermission: string | null;
 }
 
+export interface NavGroup {
+  label: string;
+  children: NavLeaf[];
+}
+
+export type NavItem = NavLeaf | NavGroup;
+
+export function isNavGroup(item: NavItem): item is NavGroup {
+  return "children" in item;
+}
+
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", requiredPermission: null },
   { label: "Notifications", href: "/notifications", requiredPermission: null },
-  { label: "Parties", href: "/parties", requiredPermission: "parties.view" },
-  { label: "Suppliers", href: "/suppliers", requiredPermission: "suppliers.view" },
+  {
+    label: "Parties",
+    children: [
+      { label: "All Parties", href: "/parties", requiredPermission: "parties.view" },
+      { label: "Party Payments", href: "/payments", requiredPermission: "payments.view" },
+    ],
+  },
+  {
+    label: "Suppliers",
+    children: [
+      { label: "All Suppliers", href: "/suppliers", requiredPermission: "suppliers.view" },
+      { label: "Supplier Payments", href: "/supplier-payments", requiredPermission: "supplier_payments.view" },
+    ],
+  },
   { label: "Lots", href: "/lots", requiredPermission: "lots.view" },
   { label: "Designs", href: "/designs", requiredPermission: "designs.view" },
   { label: "Jobs", href: "/jobs", requiredPermission: "production_jobs.view" },
@@ -18,13 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Employee Performance", href: "/performance/employees", requiredPermission: "production_entries.view" },
   { label: "Deliveries", href: "/deliveries", requiredPermission: "delivery_challans.view" },
   { label: "Invoices", href: "/invoices", requiredPermission: "invoices.view" },
-  { label: "Payments", href: "/payments", requiredPermission: "payments.view" },
   { label: "Purchases", href: "/purchases", requiredPermission: "purchases.view" },
-  {
-    label: "Supplier Payments",
-    href: "/supplier-payments",
-    requiredPermission: "supplier_payments.view",
-  },
   { label: "Expenses", href: "/expenses", requiredPermission: "expenses.view" },
   { label: "Inventory", href: "/inventory", requiredPermission: "inventory.view" },
   { label: "Reorder Requests", href: "/purchase-required", requiredPermission: "inventory.view" },

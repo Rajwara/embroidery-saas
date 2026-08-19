@@ -6,14 +6,24 @@ import { listPurchaseRequired } from "@embroidery/types";
 
 import { useAuth } from "@/lib/auth-context";
 
-import { NAV_ITEMS } from "./nav-items";
+import { isNavGroup, NAV_ITEMS, type NavItem } from "./nav-items";
+import { NavGroup } from "./NavGroup";
 import { NavLink } from "./NavLink";
 
 export function Sidebar() {
   const { hasPermission, user, isPlatformAdmin, logout } = useAuth();
   const [openPurchaseRequiredCount, setOpenPurchaseRequiredCount] = useState(0);
 
-  const visibleItems = NAV_ITEMS.filter((item) => hasPermission(item.requiredPermission));
+  // Leaves are dropped if their own permission fails; groups are dropped
+  // only if EVERY child fails (a group with zero visible children has
+  // nothing to expand into), otherwise kept with just the visible children.
+  const visibleItems = NAV_ITEMS.map((item): NavItem | null => {
+    if (isNavGroup(item)) {
+      const visibleChildren = item.children.filter((child) => hasPermission(child.requiredPermission));
+      return visibleChildren.length > 0 ? { ...item, children: visibleChildren } : null;
+    }
+    return hasPermission(item.requiredPermission) ? item : null;
+  }).filter((item): item is NavItem => item !== null);
 
   // Minimal in-app notification for threshold breaches (ROADMAP.md Phase 4
   // item 4) -- a full Notifications Centre with persistence/read-state is
@@ -30,14 +40,18 @@ export function Sidebar() {
       <div>
         <div className="mb-6 px-2 text-lg font-semibold">Embroidery SaaS</div>
         <nav className="space-y-1">
-          {visibleItems.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              badge={item.href === "/purchase-required" ? openPurchaseRequiredCount : undefined}
-            />
-          ))}
+          {visibleItems.map((item) =>
+            isNavGroup(item) ? (
+              <NavGroup key={item.label} label={item.label} items={item.children} />
+            ) : (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                badge={item.href === "/purchase-required" ? openPurchaseRequiredCount : undefined}
+              />
+            )
+          )}
         </nav>
       </div>
       <div className="space-y-2 px-2">

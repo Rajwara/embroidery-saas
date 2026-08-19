@@ -60,7 +60,7 @@ export default function PaymentsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Payments</h1>
+        <h1 className="text-2xl font-semibold">Party Payments</h1>
         {hasPermission("payments.create") && (
           <Button render={<Link href="/payments/new" />}>New Payment</Button>
         )}
