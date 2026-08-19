@@ -48,6 +48,9 @@ class Factory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # Same pattern, for Expense.expense_number (e.g. "EXP-000001") -- see
     # routers/expenses.py.
     next_expense_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Same pattern, for SupplierPayment.payment_number (e.g. "SPMT-000001")
+    # -- see routers/supplier_payments.py.
+    next_supplier_payment_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     # Prefixes are editable (Settings > Company Profile); the counters above
     # are not -- resetting a counter risks reusing a number already issued,
@@ -59,6 +62,7 @@ class Factory(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     payment_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="PMT")
     purchase_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="PUR")
     expense_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="EXP")
+    supplier_payment_number_prefix: Mapped[str] = mapped_column(String(20), nullable=False, default="SPMT")
 
     # Settings > Notifications. Every outbound system email (password reset,
     # invite, scheduled report delivery) reads its "From" header from here

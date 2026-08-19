@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
-from app.models import Purchase, PurchaseLineItem, Supplier, User
+from app.models import Purchase, PurchaseLineItem, Supplier, SupplierPayment, User
 from app.pdf import html_to_pdf
 from app.permissions import user_has_permission
 from app.schemas.supplier import (
@@ -67,15 +67,23 @@ def _serialize(
 
 def _current_balance(db: Session, supplier: Supplier) -> float:
     """Single-supplier version of the bulk computation in list_suppliers --
-    opening_balance + purchase totals (no credit side, see
-    SupplierWithBalanceOut's docstring)."""
+    opening_balance + purchase totals - payment amounts. Nets the full
+    SupplierPayment.amount regardless of allocation_type breakdown, same as
+    _build_ledger's payment movements below (matches Party's _build_ledger:
+    a payment reduces what's owed overall, no matter which bucket its
+    allocations landed in)."""
     purchase_total = (
         db.query(func.coalesce(func.sum(PurchaseLineItem.line_total), 0))
         .join(Purchase, PurchaseLineItem.purchase_id == Purchase.id)
         .filter(Purchase.supplier_id == supplier.id)
         .scalar()
     )
-    return float(supplier.opening_balance) + float(purchase_total)
+    payment_total = (
+        db.query(func.coalesce(func.sum(SupplierPayment.amount), 0))
+        .filter(SupplierPayment.supplier_id == supplier.id)
+        .scalar()
+    )
+    return float(supplier.opening_balance) + float(purchase_total) - float(payment_total)
 
 
 # NOTE: response_model is deliberately NOT set on any route below -- see
@@ -113,7 +121,16 @@ def list_suppliers(
             .group_by(Purchase.supplier_id)
             .all()
         )
-        balances = {s.id: float(s.opening_balance) + float(purchase_totals.get(s.id, 0)) for s in rows}
+        payment_totals = dict(
+            db.query(SupplierPayment.supplier_id, func.coalesce(func.sum(SupplierPayment.amount), 0))
+            .filter(SupplierPayment.supplier_id.in_(supplier_ids))
+            .group_by(SupplierPayment.supplier_id)
+            .all()
+        )
+        balances = {
+            s.id: float(s.opening_balance) + float(purchase_totals.get(s.id, 0)) - float(payment_totals.get(s.id, 0))
+            for s in rows
+        }
 
     return [_serialize(s, can_see_money, balances.get(s.id, float(s.opening_balance))) for s in rows]
 
@@ -225,12 +242,15 @@ def update_supplier(
 
 
 def _build_ledger(db: Session, supplier: Supplier) -> list[SupplierLedgerEntryOut]:
-    """Computed live from Purchase rows plus Supplier.opening_balance --
-    see SupplierLedgerEntryOut's docstring for why this is never stored,
-    and why there's no credit-side (payment-to-supplier) movement yet."""
+    """Computed live from Purchase (debit) and SupplierPayment (credit) rows
+    plus Supplier.opening_balance -- see SupplierLedgerEntryOut's docstring
+    for why this is never stored. Same shape as Party's _build_ledger:
+    every movement (debit or credit) goes into one list sorted by date,
+    then replayed in order to get a running balance."""
     purchases = db.query(Purchase).filter(Purchase.supplier_id == supplier.id).all()
+    payments = db.query(SupplierPayment).filter(SupplierPayment.supplier_id == supplier.id).all()
 
-    movements: list[tuple[date_type, str, str, float]] = []
+    movements: list[tuple[date_type, str, str, str, float, float]] = []
     for purchase in purchases:
         total = (
             db.query(func.coalesce(func.sum(PurchaseLineItem.line_total), 0))
@@ -238,7 +258,25 @@ def _build_ledger(db: Session, supplier: Supplier) -> list[SupplierLedgerEntryOu
             .scalar()
         )
         movements.append(
-            (purchase.purchase_date, purchase.purchase_number, f"Purchase {purchase.purchase_number}", float(total))
+            (
+                purchase.purchase_date,
+                "purchase",
+                purchase.purchase_number,
+                f"Purchase {purchase.purchase_number}",
+                float(total),
+                0.0,
+            )
+        )
+    for payment in payments:
+        movements.append(
+            (
+                payment.payment_date,
+                "payment",
+                payment.payment_number,
+                f"Payment {payment.payment_number}",
+                0.0,
+                float(payment.amount),
+            )
         )
     movements.sort(key=lambda m: m[0])
 
@@ -254,16 +292,16 @@ def _build_ledger(db: Session, supplier: Supplier) -> list[SupplierLedgerEntryOu
             balance=balance,
         )
     ]
-    for entry_date, reference, description, debit in movements:
-        balance += debit
+    for entry_date, entry_type, reference, description, debit, credit in movements:
+        balance += debit - credit
         entries.append(
             SupplierLedgerEntryOut(
                 entry_date=entry_date,
-                entry_type="purchase",
+                entry_type=entry_type,  # type: ignore[arg-type]
                 reference=reference,
                 description=description,
                 debit=debit,
-                credit=0.0,
+                credit=credit,
                 balance=round(balance, 2),
             )
         )

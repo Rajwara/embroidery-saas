@@ -1540,6 +1540,20 @@ export interface ProductionSummaryReportOut {
   by_lot: ProductionByLotRowOut[];
 }
 
+/**
+ * How much of a purchase has been paid so far (sum of purchase-type
+SupplierPaymentAllocations across every supplier payment) and what
+remains -- computed live, not stored (same reasoning as
+InvoiceBalanceOut).
+ */
+export interface PurchaseBalanceOut {
+  purchase_id: string;
+  purchase_number: string;
+  total_amount: number;
+  paid_amount: number;
+  balance: number;
+}
+
 export type PurchaseCreateRequestNotes = string | null;
 
 export interface PurchaseCreateRequest {
@@ -1875,17 +1889,16 @@ export type SupplierLedgerEntryOutEntryType = typeof SupplierLedgerEntryOutEntry
 export const SupplierLedgerEntryOutEntryType = {
   opening_balance: 'opening_balance',
   purchase: 'purchase',
+  payment: 'payment',
 } as const;
 
 /**
  * One row of a Supplier's running ledger -- computed live from
-Purchase rows plus Supplier.opening_balance, never stored (same
-"computed, not a stored ledger" pattern as the Party ledger in
-schemas/party_ledger.py). Purchases increase
-the balance owed (debit); there is no symmetric "payment to supplier"
-tracking anywhere in ROADMAP.md's Phase 3 item list, so credit rows
-never appear here yet -- a real scope gap, not an oversight, flagged
-to the user when this was built.
+Purchase (debit) and SupplierPayment (credit) rows plus
+Supplier.opening_balance, never stored (same "computed, not a stored
+ledger" pattern as the Party ledger in schemas/party_ledger.py).
+Payment tracking was a real scope gap until this was closed -- see
+[[domain_supplier_payment_gap]] memory for the prior state.
  */
 export interface SupplierLedgerEntryOut {
   entry_date: string;
@@ -1895,6 +1908,93 @@ export interface SupplierLedgerEntryOut {
   debit: number;
   credit: number;
   balance: number;
+}
+
+export type SupplierPaymentAllocationCreateRequestAllocationType = typeof SupplierPaymentAllocationCreateRequestAllocationType[keyof typeof SupplierPaymentAllocationCreateRequestAllocationType];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const SupplierPaymentAllocationCreateRequestAllocationType = {
+  purchase: 'purchase',
+  general: 'general',
+  advance: 'advance',
+  unallocated: 'unallocated',
+} as const;
+
+export type SupplierPaymentAllocationCreateRequestPurchaseId = string | null;
+
+export interface SupplierPaymentAllocationCreateRequest {
+  allocation_type: SupplierPaymentAllocationCreateRequestAllocationType;
+  purchase_id?: SupplierPaymentAllocationCreateRequestPurchaseId;
+  amount: number;
+}
+
+export type SupplierPaymentAllocationOutPurchaseId = string | null;
+
+export type SupplierPaymentAllocationOutPurchaseNumber = string | null;
+
+export interface SupplierPaymentAllocationOut {
+  id: string;
+  supplier_payment_id: string;
+  allocation_type: string;
+  purchase_id: SupplierPaymentAllocationOutPurchaseId;
+  amount: number;
+  purchase_number?: SupplierPaymentAllocationOutPurchaseNumber;
+}
+
+export type SupplierPaymentCreateRequestPaymentMethod = typeof SupplierPaymentCreateRequestPaymentMethod[keyof typeof SupplierPaymentCreateRequestPaymentMethod];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const SupplierPaymentCreateRequestPaymentMethod = {
+  cash: 'cash',
+  bank_transfer: 'bank_transfer',
+  cheque: 'cheque',
+  other: 'other',
+} as const;
+
+export type SupplierPaymentCreateRequestNotes = string | null;
+
+export interface SupplierPaymentCreateRequest {
+  branch_id: string;
+  supplier_id: string;
+  payment_date: string;
+  amount: number;
+  payment_method: SupplierPaymentCreateRequestPaymentMethod;
+  notes?: SupplierPaymentCreateRequestNotes;
+  allocations: SupplierPaymentAllocationCreateRequest[];
+}
+
+export type SupplierPaymentDetailOutNotes = string | null;
+
+/**
+ * Used by GET /supplier-payments/{id} and create -- built manually by
+the router (no ORM relationships defined on SupplierPayment), not
+derived automatically from response_model attribute access.
+ */
+export interface SupplierPaymentDetailOut {
+  id: string;
+  branch_id: string;
+  supplier_id: string;
+  payment_number: string;
+  payment_date: string;
+  amount: number;
+  payment_method: string;
+  notes: SupplierPaymentDetailOutNotes;
+  allocations: SupplierPaymentAllocationOut[];
+}
+
+export type SupplierPaymentOutNotes = string | null;
+
+export interface SupplierPaymentOut {
+  id: string;
+  branch_id: string;
+  supplier_id: string;
+  payment_number: string;
+  payment_date: string;
+  amount: number;
+  payment_method: string;
+  notes: SupplierPaymentOutNotes;
 }
 
 export type SupplierUpdateRequestName = string | null;
@@ -2230,6 +2330,23 @@ branch_id?: string | null;
 };
 
 export type ListPurchasesParams = {
+/**
+ * @minimum 0
+ */
+skip?: number;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+supplier_id?: string | null;
+};
+
+export type GetPurchaseBalancesParams = {
+supplier_id: string;
+};
+
+export type ListSupplierPaymentsParams = {
 /**
  * @minimum 0
  */
@@ -5042,6 +5159,117 @@ export const getGetPurchaseUrl = (purchaseId: string,) => {
 export const getPurchase = async (purchaseId: string, options?: RequestInit): Promise<PurchaseDetailOut> => {
   
   return apiMutator<PurchaseDetailOut>(getGetPurchaseUrl(purchaseId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Purchase Balances
+ */
+export const getGetPurchaseBalancesUrl = (params: GetPurchaseBalancesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/supplier-payments/purchase-balances?${stringifiedParams}` : `/supplier-payments/purchase-balances`
+}
+
+export const getPurchaseBalances = async (params: GetPurchaseBalancesParams, options?: RequestInit): Promise<PurchaseBalanceOut[]> => {
+  
+  return apiMutator<PurchaseBalanceOut[]>(getGetPurchaseBalancesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Supplier Payments
+ */
+export const getListSupplierPaymentsUrl = (params?: ListSupplierPaymentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/supplier-payments?${stringifiedParams}` : `/supplier-payments`
+}
+
+export const listSupplierPayments = async (params?: ListSupplierPaymentsParams, options?: RequestInit): Promise<SupplierPaymentOut[]> => {
+  
+  return apiMutator<SupplierPaymentOut[]>(getListSupplierPaymentsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Create Supplier Payment
+ */
+export const getCreateSupplierPaymentUrl = () => {
+
+
+  
+
+  return `/supplier-payments`
+}
+
+export const createSupplierPayment = async (supplierPaymentCreateRequest: SupplierPaymentCreateRequest, options?: RequestInit): Promise<SupplierPaymentDetailOut> => {
+  
+  return apiMutator<SupplierPaymentDetailOut>(getCreateSupplierPaymentUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      supplierPaymentCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Supplier Payment
+ */
+export const getGetSupplierPaymentUrl = (paymentId: string,) => {
+
+
+  
+
+  return `/supplier-payments/${paymentId}`
+}
+
+export const getSupplierPayment = async (paymentId: string, options?: RequestInit): Promise<SupplierPaymentDetailOut> => {
+  
+  return apiMutator<SupplierPaymentDetailOut>(getGetSupplierPaymentUrl(paymentId),
   {      
     ...options,
     method: 'GET'

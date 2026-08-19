@@ -27,6 +27,7 @@ from app.routers import (
     roles,
     scheduled_reports,
     subscription,
+    supplier_payments,
     suppliers,
     users,
 )
@@ -68,6 +69,7 @@ app.include_router(invoices.router, prefix="/invoices", tags=["invoices"])
 app.include_router(payments.router, prefix="/payments", tags=["payments"])
 app.include_router(payroll.router, tags=["payroll"])
 app.include_router(purchases.router, prefix="/purchases", tags=["purchases"])
+app.include_router(supplier_payments.router, prefix="/supplier-payments", tags=["supplier-payments"])
 app.include_router(expenses.router, prefix="/expenses", tags=["expenses"])
 app.include_router(inventory.router, prefix="/inventory-items", tags=["inventory"])
 app.include_router(purchase_required.router, prefix="/purchase-required", tags=["purchase-required"])

@@ -35,3 +35,11 @@ def allocation_within_invoice_balance(invoice_total: float, already_paid: float,
     paid_cents = round(already_paid * 100)
     allocation_cents = round(allocation_amount * 100)
     return paid_cents + allocation_cents <= total_cents
+
+
+# Generic name for the same integer-cents-safe comparison, used by
+# SupplierPaymentAllocation's purchase-type cap (routers/supplier_payments.py)
+# -- same math as allocation_within_invoice_balance, kept as one tested
+# implementation rather than a second copy (see this module's own docstring
+# on why float comparisons here are dangerous).
+allocation_within_balance = allocation_within_invoice_balance

@@ -38,6 +38,8 @@ from app.models.purchase_required import PurchaseRequired
 from app.models.scheduled_report_setting import ScheduledReportSetting
 from app.models.stock_transaction import StockTransaction
 from app.models.supplier import Supplier
+from app.models.supplier_payment import SupplierPayment
+from app.models.supplier_payment_allocation import SupplierPaymentAllocation
 from app.models.tenant import Permission, Role, Tenant, User
 
 __all__ = [
@@ -85,4 +87,6 @@ __all__ = [
     "PayrollRun",
     "PayrollEntry",
     "ScheduledReportSetting",
+    "SupplierPayment",
+    "SupplierPaymentAllocation",
 ]
