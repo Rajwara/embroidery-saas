@@ -87,6 +87,19 @@ def send_scheduled_reports() -> dict:
     return {"sent": sent_count, "failed": failed_count}
 
 
+@celery_app.task
+def check_reorder_thresholds() -> dict:
+    """Hourly beat tick (see celery_app.py's beat_schedule). Same
+    no-database-access-of-its-own shape as send_scheduled_reports -- calls
+    back into apps/api's internal endpoint over HTTP, shared-secret
+    authenticated, rather than querying Postgres directly."""
+    headers = {"X-Internal-Secret": INTERNAL_API_SECRET}
+    with httpx.Client(base_url=API_BASE_URL, headers=headers, timeout=60.0) as client:
+        response = client.post("/purchase-required/internal/reorder-check")
+        response.raise_for_status()
+        return response.json()
+
+
 def _send_report_email(
     to_email: str,
     report_type: str,

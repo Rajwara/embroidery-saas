@@ -16,4 +16,13 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.send_scheduled_reports",
         "schedule": crontab(hour=8, minute=0),
     },
+    # Catches items that are below minimum_threshold without having had a
+    # recent stock-changing event -- the reactive check in
+    # maybe_open_purchase_required only fires inside create_stock_transaction
+    # and create_purchase, so seeded/imported/directly-edited data can sit
+    # below threshold indefinitely with no reorder request ever opened.
+    "check-reorder-thresholds": {
+        "task": "tasks.check_reorder_thresholds",
+        "schedule": crontab(minute=0),
+    },
 }

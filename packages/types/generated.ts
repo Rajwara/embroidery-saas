@@ -2291,6 +2291,8 @@ status?: string | null;
 open_only?: boolean;
 };
 
+export type InternalCheckReorderThresholds200 = { [key: string]: unknown };
+
 export type GetMachineCostReportParams = {
 date_from: string;
 date_to: string;
@@ -5317,6 +5319,45 @@ export const advancePurchaseRequired = async (requestId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       advancePurchaseRequiredRequest,)
+  }
+);}
+
+
+
+/**
+ * Periodic sweep (apps/worker's Celery beat, hourly -- see
+apps/worker/tasks.py's check_reorder_thresholds). maybe_open_purchase_
+required (app/routers/inventory.py) only runs reactively, inside
+create_stock_transaction and create_purchase -- an item whose stock was
+already below minimum_threshold before either of those ever ran against
+it (seeded data, a raw DB write, a future bulk-import path, or simply
+minimum_threshold being raised via update_inventory_item, which never
+touches stock at all) would otherwise never get flagged. This sweep
+closes that gap by checking every active item across every tenant, not
+just ones with a recent stock-changing event. Same
+tenant-loop-plus-SET-LOCAL pattern as
+internal_list_due_scheduled_reports, for the same reason: there's no
+single authenticated tenant to derive RLS context from on a
+machine-to-machine call. Idempotent -- maybe_open_purchase_required
+itself skips items that already have an open (non-"received") request.
+ * @summary Internal Check Reorder Thresholds
+ */
+export const getInternalCheckReorderThresholdsUrl = () => {
+
+
+  
+
+  return `/purchase-required/internal/reorder-check`
+}
+
+export const internalCheckReorderThresholds = async ( options?: RequestInit): Promise<InternalCheckReorderThresholds200> => {
+  
+  return apiMutator<InternalCheckReorderThresholds200>(getInternalCheckReorderThresholdsUrl(),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
   }
 );}
 

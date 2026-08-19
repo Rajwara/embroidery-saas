@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
-from app.dependencies import require_permission
-from app.models import InventoryItem, PurchaseRequired, StockTransaction, User
+from app.dependencies import require_internal_secret, require_permission
+from app.models import InventoryItem, PurchaseRequired, StockTransaction, Tenant, User
 from app.models.purchase_required import PURCHASE_REQUIRED_STATUSES
+from app.routers.inventory import maybe_open_purchase_required
 from app.schemas.inventory import AdvancePurchaseRequiredRequest, PurchaseRequiredOut
 
 router = APIRouter()
@@ -120,3 +121,52 @@ def advance_purchase_required(
     db.refresh(row)
     item = db.get(InventoryItem, row.inventory_item_id)
     return _to_out(row, item, _current_stock(db, item.id))
+
+
+# ---------------------------------------------------------------------------
+# Internal (worker-only, shared-secret authenticated)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/internal/reorder-check", operation_id="internalCheckReorderThresholds")
+def internal_check_reorder_thresholds(
+    db: Session = Depends(get_db),
+    _secret: None = Depends(require_internal_secret),
+) -> dict:
+    """Periodic sweep (apps/worker's Celery beat, hourly -- see
+    apps/worker/tasks.py's check_reorder_thresholds). maybe_open_purchase_
+    required (app/routers/inventory.py) only runs reactively, inside
+    create_stock_transaction and create_purchase -- an item whose stock was
+    already below minimum_threshold before either of those ever ran against
+    it (seeded data, a raw DB write, a future bulk-import path, or simply
+    minimum_threshold being raised via update_inventory_item, which never
+    touches stock at all) would otherwise never get flagged. This sweep
+    closes that gap by checking every active item across every tenant, not
+    just ones with a recent stock-changing event. Same
+    tenant-loop-plus-SET-LOCAL pattern as
+    internal_list_due_scheduled_reports, for the same reason: there's no
+    single authenticated tenant to derive RLS context from on a
+    machine-to-machine call. Idempotent -- maybe_open_purchase_required
+    itself skips items that already have an open (non-"received") request.
+    """
+    opened = 0
+    for tenant in db.query(Tenant).all():
+        set_tenant_context(db, str(tenant.id))
+        items = db.query(InventoryItem).filter(InventoryItem.is_active.is_(True)).all()
+        for item in items:
+            before = (
+                db.query(PurchaseRequired)
+                .filter(PurchaseRequired.inventory_item_id == item.id, PurchaseRequired.status != "received")
+                .count()
+            )
+            maybe_open_purchase_required(db, tenant.id, item)
+            db.flush()
+            after = (
+                db.query(PurchaseRequired)
+                .filter(PurchaseRequired.inventory_item_id == item.id, PurchaseRequired.status != "received")
+                .count()
+            )
+            if after > before:
+                opened += 1
+        db.commit()
+    return {"opened": opened}
