@@ -102,7 +102,11 @@ export default function SuppliersPage() {
                   <TableCell className="text-muted-foreground">{supplier.contact_person ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{supplier.phone ?? "—"}</TableCell>
                   {canSeeMoney && (
-                    <TableCell className="text-right tabular-nums">{supplier.opening_balance ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {supplier.current_balance !== null && supplier.current_balance !== undefined
+                        ? Number(supplier.current_balance).toFixed(2)
+                        : "—"}
+                    </TableCell>
                   )}
                   <TableCell>
                     <Badge variant={supplier.is_active ? "success" : "secondary"}>

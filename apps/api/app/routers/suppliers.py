@@ -53,8 +53,29 @@ STATEMENT_PDF_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 
-def _serialize(supplier: Supplier, can_see_money: bool) -> SupplierOut | SupplierWithBalanceOut:
-    return (SupplierWithBalanceOut if can_see_money else SupplierOut).model_validate(supplier)
+def _serialize(
+    supplier: Supplier, can_see_money: bool, current_balance: float = 0.0
+) -> SupplierOut | SupplierWithBalanceOut:
+    if not can_see_money:
+        return SupplierOut.model_validate(supplier)
+    return SupplierWithBalanceOut(
+        **SupplierOut.model_validate(supplier).model_dump(),
+        opening_balance=supplier.opening_balance,
+        current_balance=current_balance,
+    )
+
+
+def _current_balance(db: Session, supplier: Supplier) -> float:
+    """Single-supplier version of the bulk computation in list_suppliers --
+    opening_balance + purchase totals (no credit side, see
+    SupplierWithBalanceOut's docstring)."""
+    purchase_total = (
+        db.query(func.coalesce(func.sum(PurchaseLineItem.line_total), 0))
+        .join(Purchase, PurchaseLineItem.purchase_id == Purchase.id)
+        .filter(Purchase.supplier_id == supplier.id)
+        .scalar()
+    )
+    return float(supplier.opening_balance) + float(purchase_total)
 
 
 # NOTE: response_model is deliberately NOT set on any route below -- see
@@ -79,7 +100,22 @@ def list_suppliers(
     rows = query.order_by(Supplier.name).offset(skip).limit(limit).all()
 
     can_see_money = user.is_super_admin or user_has_permission(db, user, "suppliers.see_money")
-    return [_serialize(s, can_see_money) for s in rows]
+
+    balances: dict[uuid.UUID, float] = {}
+    if can_see_money and rows:
+        supplier_ids = [s.id for s in rows]
+        # One grouped query for the whole page rather than a per-supplier
+        # query (N+1) -- same tradeoff as list_parties.
+        purchase_totals = dict(
+            db.query(Purchase.supplier_id, func.coalesce(func.sum(PurchaseLineItem.line_total), 0))
+            .join(PurchaseLineItem, PurchaseLineItem.purchase_id == Purchase.id)
+            .filter(Purchase.supplier_id.in_(supplier_ids))
+            .group_by(Purchase.supplier_id)
+            .all()
+        )
+        balances = {s.id: float(s.opening_balance) + float(purchase_totals.get(s.id, 0)) for s in rows}
+
+    return [_serialize(s, can_see_money, balances.get(s.id, float(s.opening_balance))) for s in rows]
 
 
 @router.post(
@@ -118,8 +154,10 @@ def create_supplier(
     set_tenant_context(db, str(user.tenant_id))
     db.refresh(supplier)
 
+    # Brand new supplier, no purchases can exist yet -- current_balance is
+    # trivially opening_balance, no need for _current_balance's query.
     can_see_money = user.is_super_admin or user_has_permission(db, user, "suppliers.see_money")
-    return _serialize(supplier, can_see_money)
+    return _serialize(supplier, can_see_money, float(supplier.opening_balance))
 
 
 @router.get(
@@ -135,7 +173,8 @@ def get_supplier(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="supplier_not_found")
 
     can_see_money = user.is_super_admin or user_has_permission(db, user, "suppliers.see_money")
-    return _serialize(supplier, can_see_money)
+    balance = _current_balance(db, supplier) if can_see_money else 0.0
+    return _serialize(supplier, can_see_money, balance)
 
 
 @router.patch(
@@ -181,7 +220,8 @@ def update_supplier(
     db.refresh(supplier)
 
     can_see_money = user.is_super_admin or user_has_permission(db, user, "suppliers.see_money")
-    return _serialize(supplier, can_see_money)
+    balance = _current_balance(db, supplier) if can_see_money else 0.0
+    return _serialize(supplier, can_see_money, balance)
 
 
 def _build_ledger(db: Session, supplier: Supplier) -> list[SupplierLedgerEntryOut]:

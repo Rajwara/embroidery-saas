@@ -1846,6 +1846,8 @@ export type SupplierDocsOutNotes = string | null;
 
 export type SupplierDocsOutOpeningBalance = string | null;
 
+export type SupplierDocsOutCurrentBalance = string | null;
+
 /**
  * OpenAPI-documentation-only schema for GET/POST/PATCH /suppliers
 responses -- same reasoning as PartyDocsOut in schemas/party.py. Not used
@@ -1863,6 +1865,7 @@ export interface SupplierDocsOut {
   notes: SupplierDocsOutNotes;
   is_active: boolean;
   opening_balance?: SupplierDocsOutOpeningBalance;
+  current_balance?: SupplierDocsOutCurrentBalance;
 }
 
 export type SupplierLedgerEntryOutEntryType = typeof SupplierLedgerEntryOutEntryType[keyof typeof SupplierLedgerEntryOutEntryType];

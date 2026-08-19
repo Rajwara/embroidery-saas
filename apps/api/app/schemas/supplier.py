@@ -56,6 +56,12 @@ class SupplierWithBalanceOut(SupplierOut):
     """Returned when the caller DOES have suppliers.see_money."""
 
     opening_balance: Decimal
+    # opening_balance + purchase totals, computed live the same way
+    # _build_ledger's running total is (see routers/suppliers.py) -- there's
+    # no credit-side movement yet (no supplier-payment tracking exists, see
+    # [[domain_supplier_payment_gap]]), so this is purely additive over
+    # opening_balance, unlike Party's current_balance.
+    current_balance: Decimal
 
 
 class SupplierDocsOut(SupplierOut):
@@ -65,3 +71,4 @@ class SupplierDocsOut(SupplierOut):
     """
 
     opening_balance: Decimal | None = None
+    current_balance: Decimal | None = None
