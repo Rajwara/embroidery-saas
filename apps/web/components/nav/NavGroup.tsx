@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
@@ -9,10 +9,22 @@ import { NavLink } from "./NavLink";
 
 export function NavGroup({ label, items }: { label: string; items: NavLeaf[] }) {
   const pathname = usePathname();
-  const containsActiveChild = items.some((child) => child.href === pathname);
+  // Prefix match, not exact -- pathname is "/payments/new" or
+  // "/supplier-payments/71ba..." just as often as the bare parent route,
+  // and those sub-pages need to count as "in this group" too.
+  const containsActiveChild = items.some(
+    (child) => pathname === child.href || pathname.startsWith(`${child.href}/`)
+  );
   // Auto-expanded when you're already on one of its sub-pages, so a
-  // reload/direct-link never hides the page you're looking at.
+  // reload/direct-link never hides the page you're looking at. The effect
+  // (not just the useState initializer) keeps this true across client-side
+  // navigations too -- Sidebar/NavGroup don't remount between routes, so an
+  // initializer alone only catches the very first page load. Only ever
+  // opens, never closes, so a manual toggle elsewhere isn't fought.
   const [open, setOpen] = useState(containsActiveChild);
+  useEffect(() => {
+    if (containsActiveChild) setOpen(true);
+  }, [containsActiveChild]);
 
   return (
     <div>
