@@ -8,6 +8,7 @@ from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
 from app.models import Branch, Factory, InventoryItem, Purchase, PurchaseLineItem, StockTransaction, Supplier, User
+from app.routers.inventory import maybe_open_purchase_required
 from app.schemas.purchase import (
     PurchaseCreateRequest,
     PurchaseDetailOut,
@@ -146,6 +147,13 @@ def create_purchase(
                     notes=f"Auto-created from Purchase {purchase_number}",
                 )
             )
+            db.flush()  # populate the transaction so maybe_open_purchase_required's stock sum reflects it
+            # A receipt still leaves stock below threshold when it only
+            # partially restocks a badly depleted item -- reuse the same
+            # reorder-request check the direct stock-transaction endpoint
+            # runs, so this path doesn't silently skip it.
+            item = db.get(InventoryItem, line_payload.inventory_item_id)
+            maybe_open_purchase_required(db, user.tenant_id, item)
 
     ip_address, user_agent = client_meta(request)
     record_audit(

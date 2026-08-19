@@ -61,7 +61,7 @@ export default function NotificationsCentrePage() {
         listPurchaseRequired({ status: "pending_approval" })
           .then((rows) => ({
             key: "purchase-required",
-            title: "Purchase requests pending approval",
+            title: "Reorder requests pending approval",
             count: rows.length,
             href: "/approvals",
             tone: "neutral" as const,

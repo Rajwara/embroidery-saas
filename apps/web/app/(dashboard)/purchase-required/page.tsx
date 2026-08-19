@@ -30,9 +30,9 @@ export default function PurchaseRequiredPage() {
       .then(setRows)
       .catch((err) => {
         if (err instanceof ApiError && err.status === 403) {
-          setError("You don't have permission to view purchase requirements.");
+          setError("You don't have permission to view reorder requests.");
         } else {
-          setError("Could not load purchase requirements.");
+          setError("Could not load reorder requests.");
         }
       });
   }, [openOnly]);
@@ -44,7 +44,7 @@ export default function PurchaseRequiredPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Purchase Required</h1>
+        <h1 className="text-2xl font-semibold">Reorder Requests</h1>
         <label className="flex items-center gap-2 text-sm text-gray-600">
           <input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} />
           Open only

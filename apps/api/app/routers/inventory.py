@@ -28,6 +28,37 @@ def _current_stock(db: Session, item_id: uuid.UUID) -> int:
     return int(total)
 
 
+def maybe_open_purchase_required(db: Session, tenant_id: uuid.UUID, item: InventoryItem) -> None:
+    """Auto-populate Purchase Required (ROADMAP.md item 3) if the item's
+    current stock is below its minimum_threshold and there's no other open
+    (non-"received") request for it already -- never more than one open
+    request per item at a time. Shared with routers/purchases.py's
+    create_purchase, so a receipt logged via either path opens a reorder
+    request the same way instead of only the direct stock-transaction path
+    checking. Caller must flush() any pending StockTransaction first so
+    _current_stock reflects it."""
+    new_stock = _current_stock(db, item.id)
+    if new_stock >= item.minimum_threshold:
+        return
+    existing_open = (
+        db.query(PurchaseRequired)
+        .filter(
+            PurchaseRequired.inventory_item_id == item.id,
+            PurchaseRequired.status != "received",
+        )
+        .first()
+    )
+    if existing_open is None:
+        db.add(
+            PurchaseRequired(
+                tenant_id=tenant_id,
+                inventory_item_id=item.id,
+                status="purchase_required",
+                requested_quantity=item.minimum_threshold,
+            )
+        )
+
+
 def _to_item_out(item: InventoryItem, current_stock: int) -> InventoryItemOut:
     return InventoryItemOut(
         id=item.id,
@@ -240,31 +271,9 @@ def create_stock_transaction(
         user_agent=user_agent,
     )
 
-    # Auto-populate Purchase Required (ROADMAP.md item 3) if this
-    # transaction pushed stock below threshold and there's no other open
-    # (non-"received") request for this item already -- never more than
-    # one open request per item at a time. The transaction was already
-    # flushed above, so _current_stock already reflects it -- adding
-    # signed_quantity again here would double-count.
-    new_stock = _current_stock(db, item.id)
-    if new_stock < item.minimum_threshold:
-        existing_open = (
-            db.query(PurchaseRequired)
-            .filter(
-                PurchaseRequired.inventory_item_id == item.id,
-                PurchaseRequired.status != "received",
-            )
-            .first()
-        )
-        if existing_open is None:
-            db.add(
-                PurchaseRequired(
-                    tenant_id=user.tenant_id,
-                    inventory_item_id=item.id,
-                    status="purchase_required",
-                    requested_quantity=item.minimum_threshold,
-                )
-            )
+    # Transaction was already flushed above, so maybe_open_purchase_required's
+    # stock sum already reflects it.
+    maybe_open_purchase_required(db, user.tenant_id, item)
 
     db.commit()
     set_tenant_context(db, str(user.tenant_id))
