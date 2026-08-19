@@ -50,7 +50,12 @@ export default function SuppliersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Suppliers</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Suppliers</h1>
+        {hasPermission("suppliers.create") && (
+          <Button render={<Link href="/suppliers/new" />}>Add Supplier</Button>
+        )}
+      </div>
 
       {error && (
         <Alert variant="destructive">
