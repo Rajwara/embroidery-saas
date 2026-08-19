@@ -78,7 +78,7 @@ def list_suppliers(
         query = query.filter(Supplier.name.ilike(f"%{name}%"))
     rows = query.order_by(Supplier.name).offset(skip).limit(limit).all()
 
-    can_see_money = user_has_permission(db, user, "suppliers.see_money")
+    can_see_money = user.is_super_admin or user_has_permission(db, user, "suppliers.see_money")
     return [_serialize(s, can_see_money) for s in rows]
 
 
@@ -118,7 +118,7 @@ def create_supplier(
     set_tenant_context(db, str(user.tenant_id))
     db.refresh(supplier)
 
-    can_see_money = user_has_permission(db, user, "suppliers.see_money")
+    can_see_money = user.is_super_admin or user_has_permission(db, user, "suppliers.see_money")
     return _serialize(supplier, can_see_money)
 
 
@@ -134,7 +134,7 @@ def get_supplier(
     if supplier is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="supplier_not_found")
 
-    can_see_money = user_has_permission(db, user, "suppliers.see_money")
+    can_see_money = user.is_super_admin or user_has_permission(db, user, "suppliers.see_money")
     return _serialize(supplier, can_see_money)
 
 
@@ -180,7 +180,7 @@ def update_supplier(
     set_tenant_context(db, str(user.tenant_id))
     db.refresh(supplier)
 
-    can_see_money = user_has_permission(db, user, "suppliers.see_money")
+    can_see_money = user.is_super_admin or user_has_permission(db, user, "suppliers.see_money")
     return _serialize(supplier, can_see_money)
 
 

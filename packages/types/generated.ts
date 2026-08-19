@@ -1231,6 +1231,8 @@ export type PartyDocsOutNotes = string | null;
 
 export type PartyDocsOutOpeningBalance = string | null;
 
+export type PartyDocsOutCurrentBalance = string | null;
+
 /**
  * OpenAPI-documentation-only schema for GET/POST/PATCH /parties responses.
 
@@ -1261,6 +1263,7 @@ export interface PartyDocsOut {
   notes: PartyDocsOutNotes;
   is_active: boolean;
   opening_balance?: PartyDocsOutOpeningBalance;
+  current_balance?: PartyDocsOutCurrentBalance;
 }
 
 export type PartyUpdateRequestName = string | null;

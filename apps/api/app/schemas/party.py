@@ -56,6 +56,11 @@ class PartyWithBalanceOut(PartyOut):
     """Returned when the caller DOES have parties.see_money."""
 
     opening_balance: Decimal
+    # opening_balance + invoice totals - payment amounts, computed live the
+    # same way _build_ledger's running total is (see routers/parties.py) --
+    # opening_balance alone is just the starting number set at party
+    # creation, not the party's actual outstanding balance today.
+    current_balance: Decimal
 
 
 class PartyDocsOut(PartyOut):
@@ -78,3 +83,4 @@ class PartyDocsOut(PartyOut):
     """
 
     opening_balance: Decimal | None = None
+    current_balance: Decimal | None = None

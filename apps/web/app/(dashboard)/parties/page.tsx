@@ -50,7 +50,10 @@ export default function PartiesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Parties</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Parties</h1>
+        {hasPermission("parties.create") && <Button render={<Link href="/parties/new" />}>Add Party</Button>}
+      </div>
 
       {error && (
         <Alert variant="destructive">
@@ -97,7 +100,11 @@ export default function PartiesPage() {
                   <TableCell className="text-muted-foreground">{party.contact_person ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{party.phone ?? "—"}</TableCell>
                   {canSeeMoney && (
-                    <TableCell className="text-right tabular-nums">{party.opening_balance ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {party.current_balance !== null && party.current_balance !== undefined
+                        ? Number(party.current_balance).toFixed(2)
+                        : "—"}
+                    </TableCell>
                   )}
                   <TableCell>
                     <Badge variant={party.is_active ? "success" : "secondary"}>

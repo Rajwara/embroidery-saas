@@ -53,8 +53,29 @@ STATEMENT_PDF_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 
-def _serialize(party: Party, can_see_money: bool) -> PartyOut | PartyWithBalanceOut:
-    return (PartyWithBalanceOut if can_see_money else PartyOut).model_validate(party)
+def _serialize(party: Party, can_see_money: bool, current_balance: float = 0.0) -> PartyOut | PartyWithBalanceOut:
+    if not can_see_money:
+        return PartyOut.model_validate(party)
+    return PartyWithBalanceOut(
+        **PartyOut.model_validate(party).model_dump(),
+        opening_balance=party.opening_balance,
+        current_balance=current_balance,
+    )
+
+
+def _current_balance(db: Session, party: Party) -> float:
+    """Single-party version of the bulk computation in list_parties --
+    opening_balance + invoice totals - payment amounts."""
+    invoice_total = (
+        db.query(func.coalesce(func.sum(InvoiceLineItem.line_total), 0))
+        .join(Invoice, InvoiceLineItem.invoice_id == Invoice.id)
+        .filter(Invoice.party_id == party.id)
+        .scalar()
+    )
+    payment_total = (
+        db.query(func.coalesce(func.sum(Payment.amount), 0)).filter(Payment.party_id == party.id).scalar()
+    )
+    return float(party.opening_balance) + float(invoice_total) - float(payment_total)
 
 
 # NOTE: response_model is deliberately NOT set on any route below -- see
@@ -78,8 +99,33 @@ def list_parties(
         query = query.filter(Party.name.ilike(f"%{name}%"))
     rows = query.order_by(Party.name).offset(skip).limit(limit).all()
 
-    can_see_money = user_has_permission(db, user, "parties.see_money")
-    return [_serialize(p, can_see_money) for p in rows]
+    can_see_money = user.is_super_admin or user_has_permission(db, user, "parties.see_money")
+
+    balances: dict[uuid.UUID, float] = {}
+    if can_see_money and rows:
+        party_ids = [p.id for p in rows]
+        # Two grouped queries for the whole page rather than a per-party
+        # pair (N+1) -- same tradeoff as the performance-report aggregates
+        # in routers/production_entries.py.
+        invoice_totals = dict(
+            db.query(Invoice.party_id, func.coalesce(func.sum(InvoiceLineItem.line_total), 0))
+            .join(InvoiceLineItem, InvoiceLineItem.invoice_id == Invoice.id)
+            .filter(Invoice.party_id.in_(party_ids))
+            .group_by(Invoice.party_id)
+            .all()
+        )
+        payment_totals = dict(
+            db.query(Payment.party_id, func.coalesce(func.sum(Payment.amount), 0))
+            .filter(Payment.party_id.in_(party_ids))
+            .group_by(Payment.party_id)
+            .all()
+        )
+        balances = {
+            p.id: float(p.opening_balance) + float(invoice_totals.get(p.id, 0)) - float(payment_totals.get(p.id, 0))
+            for p in rows
+        }
+
+    return [_serialize(p, can_see_money, balances.get(p.id, float(p.opening_balance))) for p in rows]
 
 
 @router.post(
@@ -118,8 +164,10 @@ def create_party(
     set_tenant_context(db, str(user.tenant_id))
     db.refresh(party)
 
-    can_see_money = user_has_permission(db, user, "parties.see_money")
-    return _serialize(party, can_see_money)
+    # Brand new party, no invoices/payments can exist yet -- current_balance
+    # is trivially opening_balance, no need for _current_balance's queries.
+    can_see_money = user.is_super_admin or user_has_permission(db, user, "parties.see_money")
+    return _serialize(party, can_see_money, float(party.opening_balance))
 
 
 @router.get("/{party_id}", responses={200: {"model": PartyDocsOut}}, operation_id="getParty")
@@ -132,8 +180,9 @@ def get_party(
     if party is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="party_not_found")
 
-    can_see_money = user_has_permission(db, user, "parties.see_money")
-    return _serialize(party, can_see_money)
+    can_see_money = user.is_super_admin or user_has_permission(db, user, "parties.see_money")
+    balance = _current_balance(db, party) if can_see_money else 0.0
+    return _serialize(party, can_see_money, balance)
 
 
 @router.patch("/{party_id}", responses={200: {"model": PartyDocsOut}}, operation_id="updateParty")
@@ -176,8 +225,9 @@ def update_party(
     set_tenant_context(db, str(user.tenant_id))
     db.refresh(party)
 
-    can_see_money = user_has_permission(db, user, "parties.see_money")
-    return _serialize(party, can_see_money)
+    can_see_money = user.is_super_admin or user_has_permission(db, user, "parties.see_money")
+    balance = _current_balance(db, party) if can_see_money else 0.0
+    return _serialize(party, can_see_money, balance)
 
 
 def _build_ledger(db: Session, party: Party) -> list[LedgerEntryOut]:
