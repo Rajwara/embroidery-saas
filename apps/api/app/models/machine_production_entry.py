@@ -48,3 +48,13 @@ class MachineProductionEntry(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     rejection_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # Who submitted this entry via the app -- distinct from
+    # operator_employee_id, which is who did the physical work and is very
+    # often a floor worker with no User/login of their own (a supervisor
+    # logs shift entries on their behalf). Nullable because entries created
+    # before this column existed have no way to backfill it accurately;
+    # "My Logged Entries" (routers/production_entries.py's mine_only
+    # filter) simply won't surface those old rows for anyone.
+    logged_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )

@@ -18,6 +18,7 @@ export function isNavGroup(item: NavItem): item is NavGroup {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", requiredPermission: null },
   { label: "Notifications", href: "/notifications", requiredPermission: null },
+  { label: "Approvals", href: "/approvals", requiredPermission: "production_entries.approve" },
   {
     label: "Parties",
     children: [
@@ -35,8 +36,13 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Lots", href: "/lots", requiredPermission: "lots.view" },
   { label: "Designs", href: "/designs", requiredPermission: "designs.view" },
   { label: "Jobs", href: "/jobs", requiredPermission: "production_jobs.view" },
-  { label: "Daily Shift", href: "/shift", requiredPermission: "production_entries.create" },
-  { label: "Approvals", href: "/approvals", requiredPermission: "production_entries.approve" },
+  {
+    label: "Daily Shift",
+    children: [
+      { label: "Daily Shift", href: "/shift", requiredPermission: "production_entries.create" },
+      { label: "My Logged Entries", href: "/my-entries", requiredPermission: "production_entries.create" },
+    ],
+  },
   { label: "Machine Performance", href: "/performance/machines", requiredPermission: "production_entries.view" },
   { label: "Employee Performance", href: "/performance/employees", requiredPermission: "production_entries.view" },
   { label: "Deliveries", href: "/deliveries", requiredPermission: "delivery_challans.view" },

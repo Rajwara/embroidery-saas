@@ -75,8 +75,9 @@ def list_production_entries(
     machine_id: uuid.UUID | None = None,
     operator_employee_id: uuid.UUID | None = None,
     production_job_machine_allocation_id: uuid.UUID | None = None,
+    mine_only: bool = False,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_permission("production_entries.view")),
+    user: User = Depends(require_permission("production_entries.view")),
 ) -> list[MachineProductionEntryOut]:
     query = (
         db.query(MachineProductionEntry, ProductionJobMachineAllocation, ProductionJobComponent, Machine, Employee)
@@ -105,6 +106,12 @@ def list_production_entries(
         query = query.filter(
             MachineProductionEntry.production_job_machine_allocation_id == production_job_machine_allocation_id
         )
+    if mine_only:
+        # Who submitted the entry, not who the operator/helper were -- see
+        # MachineProductionEntry.logged_by_user_id's docstring. Entries
+        # created before this column existed have it as NULL and will
+        # never match here, for anyone.
+        query = query.filter(MachineProductionEntry.logged_by_user_id == user.id)
 
     rows = (
         query.order_by(MachineProductionEntry.entry_date.desc(), MachineProductionEntry.created_at.desc())
@@ -306,6 +313,7 @@ def create_production_entry(
         quantity=payload.quantity,
         status="pending",
         notes=payload.notes,
+        logged_by_user_id=user.id,
     )
     db.add(entry)
     db.flush()  # populate entry.id -- Python-side default, not set until flush
