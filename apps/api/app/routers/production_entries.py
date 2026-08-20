@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.audit import client_meta, record_audit
@@ -56,6 +56,39 @@ def _to_entry_out(
         operator_name=operator.full_name,
         helper_name=helper.full_name if helper is not None else None,
     )
+
+
+def _machine_conflict_code(
+    db: Session,
+    employee_id: uuid.UUID,
+    entry_date: date,
+    shift: str,
+    target_machine_id: uuid.UUID,
+) -> str | None:
+    """An employee (as operator or helper) can't be logged against two
+    different machines in the same date+shift -- doesn't apply across other
+    dates/shifts, and rejected entries don't count as a real assignment.
+    Returns the conflicting machine's code, or None if there's no conflict."""
+    conflict = (
+        db.query(Machine.code)
+        .join(ProductionJobMachineAllocation, Machine.id == ProductionJobMachineAllocation.machine_id)
+        .join(
+            MachineProductionEntry,
+            MachineProductionEntry.production_job_machine_allocation_id == ProductionJobMachineAllocation.id,
+        )
+        .filter(
+            MachineProductionEntry.entry_date == entry_date,
+            MachineProductionEntry.shift == shift,
+            MachineProductionEntry.status != "rejected",
+            ProductionJobMachineAllocation.machine_id != target_machine_id,
+            or_(
+                MachineProductionEntry.operator_employee_id == employee_id,
+                MachineProductionEntry.helper_employee_id == employee_id,
+            ),
+        )
+        .first()
+    )
+    return conflict.code if conflict else None
 
 
 def _entry_out_by_id(db: Session, entry: MachineProductionEntry) -> MachineProductionEntryOut:
@@ -360,6 +393,24 @@ def create_production_entry(
 
     if payload.quantity <= 0:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="quantity_must_be_positive")
+
+    operator_conflict = _machine_conflict_code(
+        db, payload.operator_employee_id, payload.entry_date, payload.shift, machine.id
+    )
+    if operator_conflict:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=f"This operator is already assigned to {operator_conflict} for this shift.",
+        )
+    if payload.helper_employee_id is not None:
+        helper_conflict = _machine_conflict_code(
+            db, payload.helper_employee_id, payload.entry_date, payload.shift, machine.id
+        )
+        if helper_conflict:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"This helper is already assigned to {helper_conflict} for this shift.",
+            )
 
     entry = MachineProductionEntry(
         tenant_id=user.tenant_id,
