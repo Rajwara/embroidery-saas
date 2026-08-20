@@ -1050,6 +1050,47 @@ export interface MachineAllocationInput {
   quantity?: MachineAllocationInputQuantity;
 }
 
+/**
+ * One of this machine's ProductionJobMachineAllocation rows, with
+lot/design/party context (see routers/machines.py's
+list_machine_allocations) -- for logging actual produced quantity
+against a specific component, as opposed to the lighter-weight "who's
+currently assigned" concept in MachineAssignmentRequest.
+ */
+export interface MachineAllocationOut {
+  allocation_id: string;
+  component_type: string;
+  lot_id: string;
+  lot_number: string;
+  colour_name: string;
+  design_id: string;
+  design_name: string;
+  party_name: string;
+  allocated_quantity: number;
+  approved_quantity: number;
+  remaining_quantity: number;
+}
+
+export type MachineAssignmentRequestCurrentShift = string | null;
+
+export type MachineAssignmentRequestCurrentOperatorEmployeeId = string | null;
+
+export type MachineAssignmentRequestCurrentHelperEmployeeId = string | null;
+
+export type MachineAssignmentRequestCurrentLotId = string | null;
+
+/**
+ * Full replace, not a partial PATCH -- every field is always applied
+(unlike MachineUpdateRequest's exclude-None convention), so clearing the
+assignment is just sending all fields as null.
+ */
+export interface MachineAssignmentRequest {
+  current_shift?: MachineAssignmentRequestCurrentShift;
+  current_operator_employee_id?: MachineAssignmentRequestCurrentOperatorEmployeeId;
+  current_helper_employee_id?: MachineAssignmentRequestCurrentHelperEmployeeId;
+  current_lot_id?: MachineAssignmentRequestCurrentLotId;
+}
+
 export type MachineCostReportOutBranchId = string | null;
 
 export interface MachineCostReportOut {
@@ -1120,6 +1161,14 @@ export type MachineOutPurchaseDate = string | null;
 
 export type MachineOutNotes = string | null;
 
+export type MachineOutCurrentShift = string | null;
+
+export type MachineOutCurrentOperatorEmployeeId = string | null;
+
+export type MachineOutCurrentHelperEmployeeId = string | null;
+
+export type MachineOutCurrentLotId = string | null;
+
 export interface MachineOut {
   id: string;
   branch_id: string;
@@ -1133,6 +1182,10 @@ export interface MachineOut {
   status: string;
   notes: MachineOutNotes;
   is_active: boolean;
+  current_shift: MachineOutCurrentShift;
+  current_operator_employee_id: MachineOutCurrentOperatorEmployeeId;
+  current_helper_employee_id: MachineOutCurrentHelperEmployeeId;
+  current_lot_id: MachineOutCurrentLotId;
 }
 
 /**
@@ -1206,6 +1259,84 @@ export interface MachineProductionEntryOut {
   component_type: string;
   operator_name: string;
   helper_name: MachineProductionEntryOutHelperName;
+}
+
+export type MachineStatusHistoryOutOldStatus = string | null;
+
+export type MachineStatusHistoryOutNewStatus = string | null;
+
+export type MachineStatusHistoryOutActorName = string | null;
+
+/**
+ * One status-field change, read from the existing audit log (every
+PATCH /machines/{id} that touches status already writes an AuditLog row)
+-- not a dedicated table, see get_machine_status_history.
+ */
+export interface MachineStatusHistoryOut {
+  changed_at: string;
+  old_status: MachineStatusHistoryOutOldStatus;
+  new_status: MachineStatusHistoryOutNewStatus;
+  actor_name: MachineStatusHistoryOutActorName;
+}
+
+export type MachineStatusOutLight = typeof MachineStatusOutLight[keyof typeof MachineStatusOutLight];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const MachineStatusOutLight = {
+  active: 'active',
+  maintenance: 'maintenance',
+  out_of_order: 'out_of_order',
+  idle: 'idle',
+} as const;
+
+export type MachineStatusOutCurrentShift = string | null;
+
+export type MachineStatusOutCurrentOperatorId = string | null;
+
+export type MachineStatusOutCurrentOperatorName = string | null;
+
+export type MachineStatusOutCurrentHelperId = string | null;
+
+export type MachineStatusOutCurrentHelperName = string | null;
+
+export type MachineStatusOutCurrentLotId = string | null;
+
+export type MachineStatusOutCurrentLotNumber = string | null;
+
+export type MachineStatusOutCurrentDesignId = string | null;
+
+export type MachineStatusOutCurrentDesignName = string | null;
+
+export type MachineStatusOutCurrentPartyId = string | null;
+
+export type MachineStatusOutCurrentPartyName = string | null;
+
+export type MachineStatusOutQuantityByShiftToday = {[key: string]: number};
+
+/**
+ * One machine's current floor snapshot (see routers/machines.py's
+get_machine_status_board). current_shift/operator/helper/lot/design/party
+are read from the machine's own persistent assignment fields (set via
+"Assign work" on the Machine Detail page) -- NOT derived from production
+entries. quantity_by_shift_today is the one part that's still a live
+computation, since it's a real output figure, not a staffing fact.
+ */
+export interface MachineStatusOut {
+  machine_id: string;
+  light: MachineStatusOutLight;
+  current_shift: MachineStatusOutCurrentShift;
+  current_operator_id: MachineStatusOutCurrentOperatorId;
+  current_operator_name: MachineStatusOutCurrentOperatorName;
+  current_helper_id: MachineStatusOutCurrentHelperId;
+  current_helper_name: MachineStatusOutCurrentHelperName;
+  current_lot_id: MachineStatusOutCurrentLotId;
+  current_lot_number: MachineStatusOutCurrentLotNumber;
+  current_design_id: MachineStatusOutCurrentDesignId;
+  current_design_name: MachineStatusOutCurrentDesignName;
+  current_party_id: MachineStatusOutCurrentPartyId;
+  current_party_name: MachineStatusOutCurrentPartyName;
+  quantity_by_shift_today: MachineStatusOutQuantityByShiftToday;
 }
 
 export type MachineUpdateRequestCode = string | null;
@@ -2213,6 +2344,10 @@ skip?: number;
 limit?: number;
 is_active?: boolean;
 code?: string | null;
+branch_id?: string | null;
+};
+
+export type GetMachineStatusBoardParams = {
 branch_id?: string | null;
 };
 
@@ -3235,6 +3370,138 @@ export const createMachine = async (machineCreateRequest: MachineCreateRequest, 
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       machineCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Machine Status Board
+ */
+export const getGetMachineStatusBoardUrl = (params?: GetMachineStatusBoardParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/machines/status?${stringifiedParams}` : `/machines/status`
+}
+
+export const getMachineStatusBoard = async (params?: GetMachineStatusBoardParams, options?: RequestInit): Promise<MachineStatusOut[]> => {
+  
+  return apiMutator<MachineStatusOut[]>(getGetMachineStatusBoardUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary List Machine Allocations
+ */
+export const getListMachineAllocationsUrl = (machineId: string,) => {
+
+
+  
+
+  return `/machines/${machineId}/allocations`
+}
+
+export const listMachineAllocations = async (machineId: string, options?: RequestInit): Promise<MachineAllocationOut[]> => {
+  
+  return apiMutator<MachineAllocationOut[]>(getListMachineAllocationsUrl(machineId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Machine Status History
+ */
+export const getGetMachineStatusHistoryUrl = (machineId: string,) => {
+
+
+  
+
+  return `/machines/${machineId}/status-history`
+}
+
+export const getMachineStatusHistory = async (machineId: string, options?: RequestInit): Promise<MachineStatusHistoryOut[]> => {
+  
+  return apiMutator<MachineStatusHistoryOut[]>(getGetMachineStatusHistoryUrl(machineId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Get Machine Status Pdf
+ */
+export const getGetMachineStatusPdfUrl = (machineId: string,) => {
+
+
+  
+
+  return `/machines/${machineId}/status/pdf`
+}
+
+export const getMachineStatusPdf = async (machineId: string, options?: RequestInit): Promise<unknown> => {
+  
+  return apiMutator<unknown>(getGetMachineStatusPdfUrl(machineId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * Full replace of "who's on this machine right now" (see
+MachineAssignmentRequest) -- the Machine Detail page's "Assign work"
+section. Sending every field as null clears the assignment.
+ * @summary Set Machine Assignment
+ */
+export const getSetMachineAssignmentUrl = (machineId: string,) => {
+
+
+  
+
+  return `/machines/${machineId}/assignment`
+}
+
+export const setMachineAssignment = async (machineId: string,
+    machineAssignmentRequest: MachineAssignmentRequest, options?: RequestInit): Promise<MachineOut> => {
+  
+  return apiMutator<MachineOut>(getSetMachineAssignmentUrl(machineId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      machineAssignmentRequest,)
   }
 );}
 

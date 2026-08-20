@@ -22,3 +22,16 @@ class Machine(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
     notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # "Who's assigned to this machine right now" -- an explicit, persistent
+    # staffing record the user sets directly from the Machine Detail page's
+    # "Assign work" section, deliberately separate from MachineProductionEntry
+    # (which records actual produced quantity, not who's currently staffed).
+    # All nullable together: an empty assignment is "nothing currently
+    # assigned" and is what the reactivate-to-Active prompt checks for.
+    current_shift: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    current_operator_employee_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("employees.id"), nullable=True
+    )
+    current_helper_employee_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("employees.id"), nullable=True)
+    current_lot_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("lots.id"), nullable=True)
