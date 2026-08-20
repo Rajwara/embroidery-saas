@@ -518,7 +518,7 @@ export default function MachineDetailPage(props: { params: Promise<{ id: string 
         {assigning ? (
           <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
             <p className="text-xs text-muted-foreground">
-              Who's on this machine right now -- separate from logged production, this is just staffing.
+              Who&apos;s on this machine right now -- separate from logged production, this is just staffing.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -586,8 +586,8 @@ export default function MachineDetailPage(props: { params: Promise<{ id: string 
 
             {pendingActivate && (
               <p className="text-xs text-muted-foreground">
-                Saving this will also mark the machine Active. If you skip instead, it'll be marked Active but stay
-                idle until someone's actually assigned.
+                Saving this will also mark the machine Active. If you skip instead, it&apos;ll be marked Active but stay
+                idle until someone&apos;s actually assigned.
               </p>
             )}
 
