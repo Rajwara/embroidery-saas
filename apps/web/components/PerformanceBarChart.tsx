@@ -18,11 +18,10 @@ interface PerformanceBarChartProps {
   emptyMessage: string;
 }
 
-// Sequential accent hue (dataviz skill's categorical slot 1 / default
-// sequential blue) -- single series, so no legend needed, only this one hue.
-// This app doesn't implement dark mode elsewhere yet, so only the light value
-// is used here, matching the rest of the codebase's plain-Tailwind styling.
-const BAR_COLOR = "#2a78d6";
+// Brand blue (--chart-1 token, same as the rest of the app's categorical
+// order) -- single series, so no legend needed, just this one hue. Reads
+// the CSS token so it resolves correctly in both light and dark mode.
+const BAR_COLOR = "oklch(var(--chart-1))";
 
 // Stitch counts are computed from DesignVariant.stitch_count, which is
 // nullable and often unset (see app/stitch_resolution.py) -- showing "0

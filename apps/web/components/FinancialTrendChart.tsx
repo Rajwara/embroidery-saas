@@ -18,14 +18,15 @@ const MONTH_ABBR = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-// Same categorical slots/order as FinancialSummaryChart (blue/orange/aqua) --
-// this triple validates all-pairs CVD/contrast in both modes, and keeping
-// Revenue/Expenses on the same colors across both charts avoids relabeling
-// the same series with a different hue elsewhere on the Dashboard.
+// Brand categorical order (blue/green/orange), read from the same
+// --chart-N CSS tokens the rest of the app's theme uses (globals.css) --
+// resolves to different, separately-validated hex per light/dark mode
+// automatically, rather than a hardcoded value that only ever looked right
+// in one theme.
 const SERIES = [
-  { key: "revenue", label: "Revenue", color: "#2a78d6" },
-  { key: "expenses", label: "Expenses", color: "#eb6834" },
-  { key: "net", label: "Net Profit", color: "#1baf7a" },
+  { key: "revenue", label: "Revenue", color: "oklch(var(--chart-1))" },
+  { key: "expenses", label: "Expenses", color: "oklch(var(--chart-3))" },
+  { key: "net", label: "Net Profit", color: "oklch(var(--chart-2))" },
 ] as const;
 
 const WIDTH = 760;

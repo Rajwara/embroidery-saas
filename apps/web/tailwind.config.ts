@@ -68,6 +68,26 @@ const config: Config = {
           border: "oklch(var(--sidebar-border) / <alpha-value>)",
           ring: "oklch(var(--sidebar-ring) / <alpha-value>)",
         },
+        // The brand palette, plain hex (not theme tokens) -- for spots that
+        // need a specific brand hue directly rather than a semantic role
+        // (status lights, chart fills). Each color with a text-contrast
+        // problem on white (checked against WCAG 4.5:1) gets a darkened
+        // "-text" sibling for use as small text on a light background;
+        // blue/purple already clear 4.5:1 at full saturation, no variant
+        // needed. Reserved as status colors (see badge.tsx) -- never
+        // repurposed as "series N" in a categorical chart.
+        brand: {
+          red: "#E63946",
+          "red-text": "#DA3642",
+          orange: "#FF8C00",
+          "orange-text": "#B26200",
+          yellow: "#FFC300",
+          "yellow-text": "#947100",
+          green: "#009B72",
+          "green-text": "#008763",
+          blue: "#0077B6",
+          purple: "#8A2BE2",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

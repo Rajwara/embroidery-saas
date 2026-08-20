@@ -38,6 +38,10 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-56 flex-col justify-between border-r border-gray-200 bg-white p-4">
       <div>
+        {/* TODO: swap for an <img> once a real logo file exists --
+            apps/web/public/logo.png doesn't exist yet (no public/ dir at
+            all). Same spot to update the login page and app/favicon.ico
+            once that file lands. */}
         <div className="mb-6 px-2 text-lg font-semibold">Embroidery SaaS</div>
         <nav className="space-y-1">
           {visibleItems.map((item) =>

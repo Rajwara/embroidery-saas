@@ -13,7 +13,8 @@
     --card-foreground: 0.145 0 0;
     --popover: 1 0 0;
     --popover-foreground: 0.145 0 0;
-    --primary: 0.205 0 0;
+    /* Brand blue (#0077B6) -- primary actions, active nav, focus rings. */
+    --primary: 0.546 0.131 242.683;
     --primary-foreground: 0.985 0 0;
     --secondary: 0.97 0 0;
     --secondary-foreground: 0.205 0 0;
@@ -21,16 +22,20 @@
     --muted-foreground: 0.556 0 0;
     --accent: 0.97 0 0;
     --accent-foreground: 0.205 0 0;
-    --destructive: 0.577 0.245 27.325;
+    /* Brand red (#E63946) -- errors/destructive actions. */
+    --destructive: 0.612 0.208 22.241;
     --destructive-foreground: 0.985 0 0;
     --border: 0.922 0 0;
     --input: 0.922 0 0;
-    --ring: 0.708 0 0;
-    --chart-1: 0.87 0 0;
-    --chart-2: 0.556 0 0;
-    --chart-3: 0.439 0 0;
-    --chart-4: 0.371 0 0;
-    --chart-5: 0.269 0 0;
+    --ring: 0.546 0.131 242.683;
+    /* Brand categorical order (blue/green/orange/purple/red), validated for
+       CVD-safety and contrast via the dataviz skill's checker -- see
+       FinancialTrendChart/PerformanceBarChart, which read these directly. */
+    --chart-1: 0.546 0.131 242.683;
+    --chart-2: 0.611 0.127 166.121;
+    --chart-3: 0.751 0.179 58.283;
+    --chart-4: 0.534 0.250 301.375;
+    --chart-5: 0.612 0.208 22.241;
     --radius: 0.625rem;
     --radius-xs: calc(var(--radius) * 0.5);
     --radius-sm: calc(var(--radius) * 0.75);
@@ -39,12 +44,12 @@
     --radius-xl: calc(var(--radius) * 1.5);
     --sidebar: 0.985 0 0;
     --sidebar-foreground: 0.145 0 0;
-    --sidebar-primary: 0.205 0 0;
+    --sidebar-primary: 0.546 0.131 242.683;
     --sidebar-primary-foreground: 0.985 0 0;
     --sidebar-accent: 0.97 0 0;
     --sidebar-accent-foreground: 0.205 0 0;
     --sidebar-border: 0.922 0 0;
-    --sidebar-ring: 0.708 0 0}
+    --sidebar-ring: 0.546 0.131 242.683}
   .dark {
     --background: 0.145 0 0;
     --foreground: 0.985 0 0;
@@ -52,8 +57,8 @@
     --card-foreground: 0.985 0 0;
     --popover: 0.205 0 0;
     --popover-foreground: 0.985 0 0;
-    --primary: 0.922 0 0;
-    --primary-foreground: 0.205 0 0;
+    --primary: 0.546 0.131 242.683;
+    --primary-foreground: 0.985 0 0;
     --secondary: 0.269 0 0;
     --secondary-foreground: 0.985 0 0;
     --muted: 0.269 0 0;
@@ -64,20 +69,23 @@
     --destructive-foreground: 0.985 0 0;
     --border: 1 0 0;
     --input: 1 0 0;
-    --ring: 0.556 0 0;
-    --chart-1: 0.87 0 0;
-    --chart-2: 0.556 0 0;
-    --chart-3: 0.439 0 0;
-    --chart-4: 0.371 0 0;
-    --chart-5: 0.269 0 0;
+    --ring: 0.546 0.131 242.683;
+    /* Same brand hues, orange (chart-3) re-tuned darker for the dark
+       surface -- the light-mode orange fails the dark lightness band when
+       validated (per dataviz skill's checker), the rest carry over as-is. */
+    --chart-1: 0.546 0.131 242.683;
+    --chart-2: 0.611 0.127 166.121;
+    --chart-3: 0.659 0.160 56.559;
+    --chart-4: 0.534 0.250 301.375;
+    --chart-5: 0.704 0.191 22.216;
     --sidebar: 0.205 0 0;
     --sidebar-foreground: 0.985 0 0;
-    --sidebar-primary: 0.488 0.243 264.376;
+    --sidebar-primary: 0.546 0.131 242.683;
     --sidebar-primary-foreground: 0.985 0 0;
     --sidebar-accent: 0.269 0 0;
     --sidebar-accent-foreground: 0.985 0 0;
     --sidebar-border: 1 0 0;
-    --sidebar-ring: 0.556 0 0}
+    --sidebar-ring: 0.546 0.131 242.683}
   * {
     @apply border-border outline-ring/50;
   }

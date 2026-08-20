@@ -51,10 +51,10 @@ const SHIFT_LABELS: Record<string, string> = {
 };
 
 const LIGHT_DOT: Record<string, string> = {
-  active: "bg-emerald-500",
-  maintenance: "bg-amber-500",
-  out_of_order: "bg-orange-600",
-  idle: "bg-rose-400",
+  active: "bg-brand-green",
+  maintenance: "bg-brand-yellow",
+  out_of_order: "bg-brand-orange",
+  idle: "bg-brand-red",
 };
 
 const LIGHT_LABEL: Record<string, string> = {

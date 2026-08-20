@@ -18,10 +18,14 @@ const badgeVariants = cva(
           "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         // Status colors, reserved for state (active/paid/approved etc.) --
         // never reused as a generic "extra" variant for something else.
+        // Brand green/yellow -- the "-text" variants are darkened just
+        // enough to clear WCAG 4.5:1 on the light tint background; dark
+        // mode uses the full-saturation brand color directly since it
+        // already clears contrast against a dark surface.
         success:
-          "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/30",
+          "bg-brand-green/10 text-brand-green-text ring-1 ring-inset ring-brand-green/25 dark:bg-brand-green/15 dark:text-brand-green dark:ring-brand-green/35",
         warning:
-          "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/30",
+          "bg-brand-yellow/15 text-brand-yellow-text ring-1 ring-inset ring-brand-yellow/30 dark:bg-brand-yellow/10 dark:text-brand-yellow dark:ring-brand-yellow/30",
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",

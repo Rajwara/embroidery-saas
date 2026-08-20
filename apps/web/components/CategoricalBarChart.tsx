@@ -3,20 +3,21 @@ interface CategoricalBarChartProps {
   valueFormatter?: (value: number) => string;
 }
 
-// Categorical slots 1-8 in fixed order (dataviz skill's palette.md) -- this
-// order passes every adjacent-pair CVD/contrast gate in both modes, so it's
-// safe up to 8 series for a bar chart (the "first three only" caveat in
-// palette.md is specifically for all-pairs-simultaneous forms like scatter/
-// choropleth, not sequential bars).
+// Brand categorical order (slots 1-5), validated for CVD-safety and
+// contrast via the dataviz skill's checker -- same order as --chart-1..5
+// in globals.css. Slots 6-8 fall back to the skill's original default
+// palette (already validated on its own), since the 6-color brand set
+// doesn't stretch to 8 distinct categories -- a rare case (most bar charts
+// here have <=5 categories) so exact brand hue match matters less there.
 const SLOTS = [
-  "#2a78d6", // blue
-  "#eb6834", // orange
-  "#1baf7a", // aqua
-  "#eda100", // yellow
-  "#e87ba4", // magenta
-  "#008300", // green
-  "#4a3aa7", // violet
-  "#e34948", // red
+  "#0077B6", // brand blue
+  "#009B72", // brand green
+  "#FF8C00", // brand orange
+  "#8A2BE2", // brand purple
+  "#E63946", // brand red
+  "#eda100", // yellow (fallback, slot 6+)
+  "#e87ba4", // magenta (fallback, slot 7+)
+  "#4a3aa7", // violet (fallback, slot 8)
 ];
 
 export function CategoricalBarChart({ data, valueFormatter = (v) => v.toLocaleString() }: CategoricalBarChartProps) {
