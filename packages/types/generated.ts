@@ -391,6 +391,27 @@ export interface EmployeeOut {
 }
 
 /**
+ * One PayrollEntry plus its parent PayrollRun's period/status -- an
+employee's payroll history across ALL runs (see GET /payroll/entries),
+vs. PayrollRunDetailOut which is all employees within ONE run.
+ */
+export interface EmployeePayrollHistoryOut {
+  id: string;
+  payroll_run_id: string;
+  employee_id: string;
+  employee_name: string;
+  basic_salary: number;
+  total_bonus: number;
+  total_deduction: number;
+  total_advance_recovery: number;
+  net_pay: number;
+  year: number;
+  month: number;
+  run_date: string;
+  run_status: string;
+}
+
+/**
  * One employee's share of total approved production over the queried
 date range. total_quantity credits an employee for entries where they
 were either the operator or the helper -- both roles get full credit
@@ -2294,6 +2315,7 @@ entry_date?: string | null;
 shift?: string | null;
 machine_id?: string | null;
 operator_employee_id?: string | null;
+employee_id?: string | null;
 production_job_machine_allocation_id?: string | null;
 mine_only?: boolean;
 };
@@ -2360,9 +2382,17 @@ limit?: number;
 party_id?: string | null;
 };
 
+export type ListSalaryProfilesParams = {
+employee_id?: string | null;
+};
+
 export type ListAdvancesParams = {
 employee_id?: string | null;
 open_only?: boolean;
+};
+
+export type ListEmployeePayrollHistoryParams = {
+employee_id: string;
 };
 
 export type ListPayrollRunsParams = {
@@ -4802,17 +4832,24 @@ export const getPayment = async (paymentId: string, options?: RequestInit): Prom
 /**
  * @summary List Salary Profiles
  */
-export const getListSalaryProfilesUrl = () => {
+export const getListSalaryProfilesUrl = (params?: ListSalaryProfilesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
-  
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/salary-profiles`
+  return stringifiedParams.length > 0 ? `/salary-profiles?${stringifiedParams}` : `/salary-profiles`
 }
 
-export const listSalaryProfiles = async ( options?: RequestInit): Promise<EmployeeSalaryProfileOut[]> => {
+export const listSalaryProfiles = async (params?: ListSalaryProfilesParams, options?: RequestInit): Promise<EmployeeSalaryProfileOut[]> => {
   
-  return apiMutator<EmployeeSalaryProfileOut[]>(getListSalaryProfilesUrl(),
+  return apiMutator<EmployeeSalaryProfileOut[]>(getListSalaryProfilesUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -4944,6 +4981,40 @@ export const getGetAdvanceUrl = (advanceId: string,) => {
 export const getAdvance = async (advanceId: string, options?: RequestInit): Promise<AdvanceDetailOut> => {
   
   return apiMutator<AdvanceDetailOut>(getGetAdvanceUrl(advanceId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * One employee's PayrollEntry across every PayrollRun -- the
+across-all-runs counterpart to PayrollRunDetailOut.entries, which is
+scoped to a single run instead (see EmployeePayrollHistoryOut).
+ * @summary List Employee Payroll History
+ */
+export const getListEmployeePayrollHistoryUrl = (params: ListEmployeePayrollHistoryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/payroll-entries?${stringifiedParams}` : `/payroll-entries`
+}
+
+export const listEmployeePayrollHistory = async (params: ListEmployeePayrollHistoryParams, options?: RequestInit): Promise<EmployeePayrollHistoryOut[]> => {
+  
+  return apiMutator<EmployeePayrollHistoryOut[]>(getListEmployeePayrollHistoryUrl(params),
   {      
     ...options,
     method: 'GET'

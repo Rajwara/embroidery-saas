@@ -31,6 +31,7 @@ from app.schemas.payroll import (
     BonusOut,
     DeductionCreateRequest,
     DeductionOut,
+    EmployeePayrollHistoryOut,
     EmployeeSalaryProfileCreateRequest,
     EmployeeSalaryProfileOut,
     EmployeeSalaryProfileUpdateRequest,
@@ -96,10 +97,14 @@ def _to_salary_profile_out(profile: EmployeeSalaryProfile, employee: Employee) -
     "/salary-profiles", response_model=list[EmployeeSalaryProfileOut], operation_id="listSalaryProfiles"
 )
 def list_salary_profiles(
+    employee_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
     _user: User = Depends(require_permission("payroll.view")),
 ) -> list[EmployeeSalaryProfileOut]:
-    profiles = db.query(EmployeeSalaryProfile).all()
+    query = db.query(EmployeeSalaryProfile)
+    if employee_id:
+        query = query.filter(EmployeeSalaryProfile.employee_id == employee_id)
+    profiles = query.all()
     return [_to_salary_profile_out(p, db.get(Employee, p.employee_id)) for p in profiles]
 
 
@@ -389,6 +394,40 @@ def _require_draft_run(db: Session, run_id: uuid.UUID) -> PayrollRun:
     if run.status != "draft":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="payroll_run_not_draft")
     return run
+
+
+@router.get(
+    "/payroll-entries", response_model=list[EmployeePayrollHistoryOut], operation_id="listEmployeePayrollHistory"
+)
+def list_employee_payroll_history(
+    employee_id: uuid.UUID = Query(...),
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("payroll.view")),
+) -> list[EmployeePayrollHistoryOut]:
+    """One employee's PayrollEntry across every PayrollRun -- the
+    across-all-runs counterpart to PayrollRunDetailOut.entries, which is
+    scoped to a single run instead (see EmployeePayrollHistoryOut)."""
+    employee = db.get(Employee, employee_id)
+    if employee is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="employee_not_found")
+
+    rows = (
+        db.query(PayrollEntry, PayrollRun)
+        .join(PayrollRun, PayrollEntry.payroll_run_id == PayrollRun.id)
+        .filter(PayrollEntry.employee_id == employee_id)
+        .order_by(PayrollRun.year.desc(), PayrollRun.month.desc())
+        .all()
+    )
+    return [
+        EmployeePayrollHistoryOut(
+            **_to_entry_out(db, entry, employee).model_dump(),
+            year=run.year,
+            month=run.month,
+            run_date=run.run_date,
+            run_status=run.status,
+        )
+        for entry, run in rows
+    ]
 
 
 @router.get("/payroll-runs", response_model=list[PayrollRunOut], operation_id="listPayrollRuns")

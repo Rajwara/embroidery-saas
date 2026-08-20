@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 interface PerformanceRow {
   id: string;
   label: string;
@@ -6,6 +8,9 @@ interface PerformanceRow {
   percentageOfTotal: number;
   totalStitches: number;
   quantityMissingStitchCount: number;
+  // Only Employee Performance rows link out (to /employees/[id]) -- Machine
+  // Performance rows have nowhere to link to yet, so this stays optional.
+  href?: string;
 }
 
 interface PerformanceBarChartProps {
@@ -49,7 +54,13 @@ export function PerformanceBarChart({ rows, emptyMessage }: PerformanceBarChartP
             title={`${row.totalQuantity} units across ${row.entryCount} entries`}
           >
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium text-gray-900">{row.label}</span>
+              {row.href ? (
+                <Link href={row.href} className="font-medium text-gray-900 hover:underline">
+                  {row.label}
+                </Link>
+              ) : (
+                <span className="font-medium text-gray-900">{row.label}</span>
+              )}
               <span className="text-gray-500">
                 {headline(row)} &middot; {row.percentageOfTotal.toFixed(1)}%
               </span>

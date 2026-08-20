@@ -251,7 +251,11 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
           <TableBody>
             {run.entries.map((entry) => (
               <TableRow key={entry.id}>
-                <TableCell className="font-medium">{entry.employee_name}</TableCell>
+                <TableCell className="font-medium">
+                  <Link href={`/employees/${entry.employee_id}`} className="hover:underline">
+                    {entry.employee_name}
+                  </Link>
+                </TableCell>
                 <TableCell className="text-right tabular-nums">{entry.basic_salary.toFixed(2)}</TableCell>
                 <TableCell className="text-right tabular-nums">{entry.total_bonus.toFixed(2)}</TableCell>
                 <TableCell className="text-right tabular-nums">{entry.total_deduction.toFixed(2)}</TableCell>

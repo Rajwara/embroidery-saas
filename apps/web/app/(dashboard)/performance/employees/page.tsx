@@ -95,6 +95,7 @@ export default function EmployeePerformancePage() {
             percentageOfTotal: r.percentage_of_total,
             totalStitches: r.total_stitches,
             quantityMissingStitchCount: r.quantity_missing_stitch_count,
+            href: `/employees/${r.employee_id}`,
           }))}
           emptyMessage="No approved production entries yet."
         />

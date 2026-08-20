@@ -125,8 +125,14 @@ export default function AdvancesPage() {
               {advances.map((advance) => (
                 <TableRow key={advance.id}>
                   <TableCell>
-                    <Link href={`/payroll/advances/${advance.id}`} className="font-medium text-foreground hover:underline">
+                    <Link href={`/employees/${advance.employee_id}`} className="font-medium text-foreground hover:underline">
                       {advance.employee_name}
+                    </Link>{" "}
+                    <Link
+                      href={`/payroll/advances/${advance.id}`}
+                      className="text-xs text-muted-foreground hover:underline"
+                    >
+                      (details)
                     </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{advance.advance_date}</TableCell>

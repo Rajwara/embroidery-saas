@@ -109,6 +109,7 @@ def list_production_entries(
     shift: str | None = None,
     machine_id: uuid.UUID | None = None,
     operator_employee_id: uuid.UUID | None = None,
+    employee_id: uuid.UUID | None = None,
     production_job_machine_allocation_id: uuid.UUID | None = None,
     mine_only: bool = False,
     db: Session = Depends(get_db),
@@ -137,6 +138,16 @@ def list_production_entries(
         query = query.filter(ProductionJobMachineAllocation.machine_id == machine_id)
     if operator_employee_id:
         query = query.filter(MachineProductionEntry.operator_employee_id == operator_employee_id)
+    if employee_id:
+        # Distinct from operator_employee_id -- matches this employee in
+        # EITHER role, for an Employee Detail page's "every entry they're
+        # on" view (see [[project_employee_detail_page]]).
+        query = query.filter(
+            or_(
+                MachineProductionEntry.operator_employee_id == employee_id,
+                MachineProductionEntry.helper_employee_id == employee_id,
+            )
+        )
     if production_job_machine_allocation_id:
         query = query.filter(
             MachineProductionEntry.production_job_machine_allocation_id == production_job_machine_allocation_id

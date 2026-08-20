@@ -277,8 +277,19 @@ function ProductionEntryRow({ entry, onResolved }: ProductionEntryRowProps) {
         <div className="text-sm font-semibold">{entry.quantity} units</div>
       </div>
       <div className="mt-1 text-xs text-gray-500">
-        Operator: {entry.operator_name}
-        {entry.helper_name && <> &middot; Helper: {entry.helper_name}</>}
+        Operator:{" "}
+        <Link href={`/employees/${entry.operator_employee_id}`} className="hover:underline">
+          {entry.operator_name}
+        </Link>
+        {entry.helper_name && entry.helper_employee_id && (
+          <>
+            {" "}
+            &middot; Helper:{" "}
+            <Link href={`/employees/${entry.helper_employee_id}`} className="hover:underline">
+              {entry.helper_name}
+            </Link>
+          </>
+        )}
         {entry.notes && <> &middot; {entry.notes}</>}
         {entry.status === "rejected" && entry.rejection_reason && (
           <> &middot; Reason: {entry.rejection_reason}</>

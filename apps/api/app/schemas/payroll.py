@@ -141,3 +141,14 @@ class PayrollRunDetailOut(PayrollRunOut):
     from response_model attribute access."""
 
     entries: list[PayrollEntryOut]
+
+
+class EmployeePayrollHistoryOut(PayrollEntryOut):
+    """One PayrollEntry plus its parent PayrollRun's period/status -- an
+    employee's payroll history across ALL runs (see GET /payroll/entries),
+    vs. PayrollRunDetailOut which is all employees within ONE run."""
+
+    year: int
+    month: int
+    run_date: date
+    run_status: str

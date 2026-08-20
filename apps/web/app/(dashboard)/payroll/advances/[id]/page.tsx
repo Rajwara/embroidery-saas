@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, use } from "react";
+import Link from "next/link";
 
 import { AlertCircle, History } from "lucide-react";
 
@@ -73,7 +74,11 @@ export default function AdvanceDetailPage(props: { params: Promise<{ id: string 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">{advance.employee_name}</h1>
+        <h1 className="text-2xl font-semibold">
+          <Link href={`/employees/${advance.employee_id}`} className="hover:underline">
+            {advance.employee_name}
+          </Link>
+        </h1>
         <p className="text-sm text-muted-foreground">
           Advance of {advance.amount.toFixed(2)} on {advance.advance_date}
         </p>

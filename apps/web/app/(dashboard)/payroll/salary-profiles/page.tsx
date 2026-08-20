@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 
 import { AlertCircle, Loader2 } from "lucide-react";
 
@@ -139,7 +140,11 @@ export default function SalaryProfilesPage() {
             <TableBody>
               {profiles.map((profile) => (
                 <TableRow key={profile.id}>
-                  <TableCell className="font-medium">{profile.employee_name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/employees/${profile.employee_id}`} className="hover:underline">
+                      {profile.employee_name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="tabular-nums">
                     {editingId === profile.id ? (
                       <input

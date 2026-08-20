@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 
 import { AlertCircle, UserRound } from "lucide-react";
 
@@ -84,7 +85,11 @@ export default function EmployeesPage() {
             <TableBody>
               {employees.map((employee) => (
                 <TableRow key={employee.id}>
-                  <TableCell className="font-medium">{employee.full_name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/employees/${employee.id}`} className="hover:underline">
+                      {employee.full_name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{employee.employee_code}</TableCell>
                   <TableCell className="text-muted-foreground">{employee.designation ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{employee.phone ?? "—"}</TableCell>
