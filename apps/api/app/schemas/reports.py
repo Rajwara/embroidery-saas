@@ -56,6 +56,9 @@ class FinancialSummaryReportOut(BaseModel):
     expenses: float
     purchases: float
     net: float
+    # Sum of Payment.amount in range -- actual cash collected from Parties,
+    # distinct from revenue (invoiced/billed amount above).
+    cash_received: float
 
 
 class ProductionByComponentRowOut(BaseModel):

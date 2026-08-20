@@ -664,6 +664,7 @@ export interface FinancialSummaryReportOut {
   expenses: number;
   purchases: number;
   net: number;
+  cash_received: number;
 }
 
 export interface ForgotPasswordRequest {
@@ -2256,6 +2257,7 @@ shift?: string | null;
 machine_id?: string | null;
 operator_employee_id?: string | null;
 production_job_machine_allocation_id?: string | null;
+mine_only?: boolean;
 };
 
 export type GetMachinePerformanceParams = {
@@ -3830,6 +3832,30 @@ export const confirmLotComponent = async (lotId: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       lotComponentConfirmRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Get Lot Pdf
+ */
+export const getGetLotPdfUrl = (lotId: string,) => {
+
+
+  
+
+  return `/lots/${lotId}/pdf`
+}
+
+export const getLotPdf = async (lotId: string, options?: RequestInit): Promise<unknown> => {
+  
+  return apiMutator<unknown>(getGetLotPdfUrl(lotId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
   }
 );}
 

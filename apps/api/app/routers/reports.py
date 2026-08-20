@@ -39,6 +39,7 @@ from app.models import (
     Machine,
     MachineProductionEntry,
     Party,
+    Payment,
     ProductionJob,
     ProductionJobComponent,
     ProductionJobMachineAllocation,
@@ -235,6 +236,16 @@ def compute_financial_summary(
         purchase_query = purchase_query.filter(Purchase.branch_id == branch_id)
     purchases = float(purchase_query.scalar())
 
+    # Actual cash collected from Parties in the range, distinct from
+    # revenue (invoiced/billed amount above) -- a Party can be invoiced in
+    # one period and pay in another, so these routinely differ.
+    cash_received_query = db.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+        Payment.payment_date >= date_from, Payment.payment_date <= date_to
+    )
+    if branch_id:
+        cash_received_query = cash_received_query.filter(Payment.branch_id == branch_id)
+    cash_received = float(cash_received_query.scalar())
+
     return FinancialSummaryReportOut(
         date_from=date_from,
         date_to=date_to,
@@ -243,6 +254,7 @@ def compute_financial_summary(
         expenses=round(expenses, 2),
         purchases=round(purchases, 2),
         net=round(revenue - expenses - purchases, 2),
+        cash_received=round(cash_received, 2),
     )
 
 

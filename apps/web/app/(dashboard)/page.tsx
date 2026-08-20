@@ -7,14 +7,13 @@ import {
   Activity,
   ArrowDownRight,
   ArrowUpRight,
-  Factory,
+  Banknote,
   FileText,
   Wallet,
 } from "lucide-react";
 
 import {
   getFinancialSummaryReport,
-  getProductionSummaryReport,
   listInvoices,
   listParties,
   listPayments,
@@ -24,7 +23,6 @@ import type {
   InvoiceOut,
   PartyDocsOut,
   PaymentOut,
-  ProductionSummaryReportOut,
 } from "@embroidery/types";
 
 import { useAuth } from "@/lib/auth-context";
@@ -40,6 +38,10 @@ function firstOfMonth(): string {
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function currentMonthName(): string {
+  return new Date().toLocaleString("en-US", { month: "long" });
 }
 
 type ActivityItem = {
@@ -58,25 +60,18 @@ export default function DashboardPage() {
   const canSeePayments = hasPermission("payments.view");
 
   const [financial, setFinancial] = useState<FinancialSummaryReportOut | null>(null);
-  const [production, setProduction] = useState<ProductionSummaryReportOut | null>(null);
   const [activity, setActivity] = useState<ActivityItem[] | null>(null);
 
   const loadReports = useCallback(() => {
     if (!canSeeReports) return;
     const dateFrom = firstOfMonth();
     const dateTo = today();
-    Promise.all([
-      getFinancialSummaryReport({ date_from: dateFrom, date_to: dateTo }),
-      getProductionSummaryReport({ date_from: dateFrom, date_to: dateTo }),
-    ])
-      .then(([financialData, productionData]) => {
-        setFinancial(financialData);
-        setProduction(productionData);
-      })
+    getFinancialSummaryReport({ date_from: dateFrom, date_to: dateTo })
+      .then(setFinancial)
       .catch(() => {
         // Dashboard is a summary view -- a failed widget shouldn't block the
-        // rest of the page; leave financial/production at null (skeleton)
-        // rather than showing an error state for a non-critical section.
+        // rest of the page; leave financial at null (skeleton) rather than
+        // showing an error state for a non-critical section.
       });
   }, [canSeeReports]);
 
@@ -129,27 +124,25 @@ export default function DashboardPage() {
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="Revenue (MTD)"
+              label={`Revenue (${currentMonthName()})`}
               value={financial?.revenue}
               icon={<ArrowUpRight className="text-emerald-600" />}
             />
             <StatCard
-              label="Expenses (MTD)"
+              label={`Expenses (${currentMonthName()})`}
               value={financial ? financial.expenses + financial.purchases : undefined}
               icon={<ArrowDownRight className="text-destructive" />}
             />
             <StatCard
-              label="Net (MTD)"
+              label={`Net (${currentMonthName()})`}
               value={financial?.net}
               icon={<Wallet />}
               valueClassName={financial && financial.net < 0 ? "text-destructive" : "text-emerald-700"}
             />
             <StatCard
-              label="Production (MTD)"
-              value={production?.total_quantity}
-              icon={<Factory />}
-              suffix=" units"
-              isMoney={false}
+              label={`Cash Received (${currentMonthName()})`}
+              value={financial?.cash_received}
+              icon={<Banknote className="text-emerald-600" />}
             />
           </div>
 
