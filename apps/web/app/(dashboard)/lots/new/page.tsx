@@ -85,7 +85,7 @@ export default function NewLotPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Client</label>
+            <label className="block text-sm font-medium text-gray-700">Party</label>
             <select
               value={partyId}
               onChange={(e) => setPartyId(e.target.value)}
@@ -93,7 +93,7 @@ export default function NewLotPage() {
               className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
             >
               <option value="" disabled>
-                Select a client
+                Select a party
               </option>
               {parties.map((party) => (
                 <option key={party.id} value={party.id}>

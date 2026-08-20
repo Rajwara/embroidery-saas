@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState, use } from "react";
 import { getLot, listBranches, listParties } from "@embroidery/types";
 import type { BranchOut, LotDetailOut, Party } from "@embroidery/types";
 
-import { ApiError } from "@/lib/api";
+import { ApiError, fetchPdfBlob } from "@/lib/api";
 
 import { ColourBreakdown } from "../_components/ColourBreakdown";
 import { ComponentConfirmation } from "../_components/ComponentConfirmation";
@@ -31,6 +31,8 @@ export default function LotDetailPage(props: { params: Promise<{ id: string }> }
   const [partyName, setPartyName] = useState<string | null>(null);
   const [branchName, setBranchName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const load = useCallback(() => {
     setError(null);
@@ -53,6 +55,21 @@ export default function LotDetailPage(props: { params: Promise<{ id: string }> }
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleDownloadPdf = async () => {
+    if (!lot) return;
+    setPdfError(null);
+    setDownloadingPdf(true);
+    try {
+      const blob = await fetchPdfBlob(`/lots/${lot.id}/pdf`);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch {
+      setPdfError("Could not generate the job card. Please try again.");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   if (error) {
     return (
@@ -80,7 +97,19 @@ export default function LotDetailPage(props: { params: Promise<{ id: string }> }
           </p>
           {lot.notes && <p className="mt-1 text-sm text-gray-500">{lot.notes}</p>}
         </div>
-        <StatusBadge status={lot.status} />
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {downloadingPdf ? "Generating..." : "Download PDF"}
+            </button>
+            <StatusBadge status={lot.status} />
+          </div>
+          {pdfError && <p className="text-xs text-red-600">{pdfError}</p>}
+        </div>
       </div>
 
       {lot.status === "pending_breakdown" && <ColourBreakdown lot={lot} onGenerated={setLot} />}

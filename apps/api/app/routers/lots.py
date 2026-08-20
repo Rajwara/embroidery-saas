@@ -1,6 +1,7 @@
+import html as html_escape
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,7 @@ from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
 from app.models import Branch, Factory, Lot, LotColour, LotComponent, Party, User
 from app.models.lot_component import COMPONENTS_BY_SUIT_TYPE
+from app.pdf import html_to_pdf
 from app.schemas.lot import (
     LotColourCreateRequest,
     LotColourOut,
@@ -22,6 +24,88 @@ from app.schemas.lot import (
 )
 
 router = APIRouter()
+
+SUIT_TYPE_LABELS = {"one_piece": "One-piece", "two_piece": "Two-piece", "three_piece": "Three-piece"}
+COMPONENT_LABELS = {"front": "Front", "back": "Back", "sleeves": "Sleeves", "trouser": "Trouser", "dupatta": "Dupatta"}
+STATUS_LABELS = {
+    "pending_breakdown": "Pending breakdown",
+    "pending_confirmation": "Pending confirmation",
+    "confirmed": "Confirmed",
+}
+
+JOB_CARD_PDF_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {{ size: A4; margin: 2cm; }}
+  body {{ font-family: sans-serif; font-size: 12px; color: #111; }}
+  h1 {{ font-size: 20px; margin: 0 0 4px 0; }}
+  h2 {{ font-size: 14px; margin: 20px 0 8px 0; }}
+  .meta {{ margin-bottom: 4px; color: #444; }}
+  .status {{ display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 10px; background: #f0f0f0; font-size: 11px; }}
+  .notes {{ margin-top: 12px; padding: 8px 10px; background: #f8f8f8; border-radius: 4px; }}
+  table {{ width: 100%; border-collapse: collapse; margin-top: 6px; }}
+  th, td {{ border: 1px solid #ccc; padding: 6px 8px; text-align: left; }}
+  th {{ background: #f3f3f3; }}
+  td.num, th.num {{ text-align: right; }}
+  .colour-heading {{ margin-top: 16px; font-weight: bold; }}
+</style>
+</head>
+<body>
+  <h1>Job Card: {lot_number}</h1>
+  <div class="meta"><strong>Party:</strong> {party_name}</div>
+  <div class="meta"><strong>Branch:</strong> {branch_name}</div>
+  <div class="meta"><strong>Received:</strong> {received_date}</div>
+  <div class="meta"><strong>Suit type:</strong> {suit_type} &middot; <strong>Total suits:</strong> {total_suit_count}</div>
+  <span class="status">{status}</span>
+  {notes_html}
+  {colours_html}
+</body>
+</html>"""
+
+
+def _build_job_card_html(db: Session, lot: Lot, party: Party, branch: Branch) -> str:
+    notes_html = f'<div class="notes">{html_escape.escape(lot.notes)}</div>' if lot.notes else ""
+
+    colours = db.query(LotColour).filter(LotColour.lot_id == lot.id).order_by(LotColour.colour_name).all()
+    colours_html = ""
+    for colour in colours:
+        components = (
+            db.query(LotComponent)
+            .filter(LotComponent.lot_colour_id == colour.id)
+            .order_by(LotComponent.component_type)
+            .all()
+        )
+        rows_html = "".join(
+            "<tr><td>{component}</td><td class=\"num\">{expected}</td><td class=\"num\">{confirmed}</td></tr>".format(
+                component=html_escape.escape(COMPONENT_LABELS.get(c.component_type, c.component_type)),
+                expected=c.expected_quantity,
+                confirmed=c.confirmed_quantity if c.confirmed_quantity is not None else "",
+            )
+            for c in components
+        )
+        colours_html += (
+            '<div class="colour-heading">{colour_name} ({suit_count} suits)</div>'
+            "<table><thead><tr><th>Component</th><th class=\"num\">Expected</th>"
+            '<th class="num">Confirmed</th></tr></thead><tbody>{rows}</tbody></table>'
+        ).format(
+            colour_name=html_escape.escape(colour.colour_name),
+            suit_count=colour.suit_count,
+            rows=rows_html,
+        )
+
+    return JOB_CARD_PDF_TEMPLATE.format(
+        lot_number=html_escape.escape(lot.lot_number),
+        party_name=html_escape.escape(party.name),
+        branch_name=html_escape.escape(branch.name),
+        received_date=lot.received_date.isoformat(),
+        suit_type=html_escape.escape(SUIT_TYPE_LABELS.get(lot.suit_type, lot.suit_type)),
+        total_suit_count=lot.total_suit_count,
+        status=html_escape.escape(STATUS_LABELS.get(lot.status, lot.status)),
+        notes_html=notes_html,
+        colours_html=colours_html,
+    )
 
 
 def _build_lot_detail(db: Session, lot: Lot) -> LotDetailOut:
@@ -375,6 +459,28 @@ def confirm_lot_component(
     set_tenant_context(db, str(user.tenant_id))
     db.refresh(component)
     return component
+
+
+@router.get("/{lot_id}/pdf", operation_id="getLotPdf")
+def get_lot_pdf(
+    lot_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("lots.view")),
+) -> Response:
+    lot = db.get(Lot, lot_id)
+    if lot is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="lot_not_found")
+    party = db.get(Party, lot.party_id)
+    branch = db.get(Branch, lot.branch_id)
+
+    html_doc = _build_job_card_html(db, lot, party, branch)
+    pdf_bytes = html_to_pdf(html_doc)
+    filename = html_escape.escape(f"{lot.lot_number}-job-card.pdf")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
 
 
 @router.post("/{lot_id}/confirm", response_model=LotDetailOut, operation_id="confirmLot")
