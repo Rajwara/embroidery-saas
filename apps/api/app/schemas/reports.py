@@ -14,6 +14,12 @@ class MachineCostRowOut(BaseModel):
     # revenue/profit isn't computed yet).
     overhead_share: float
     cost_per_unit: float | None
+    # Stitch-count equivalents -- see app/stitch_resolution.py. cost_per_stitch
+    # is None whenever total_stitches is 0 (no resolvable stitch count for
+    # anything this machine produced in range).
+    total_stitches: int
+    quantity_missing_stitch_count: int
+    cost_per_stitch: float | None
 
     model_config = {"from_attributes": True}
 
@@ -61,15 +67,32 @@ class FinancialSummaryReportOut(BaseModel):
     cash_received: float
 
 
+class FinancialTrendPointOut(BaseModel):
+    """One calendar month's summary -- same revenue/expenses/net formulas as
+    FinancialSummaryReportOut (expenses here is already expenses+purchases
+    combined, matching the Dashboard stat card's definition of "Expenses"),
+    just computed per-month instead of over one arbitrary range."""
+
+    year: int
+    month: int  # 1-12
+    revenue: float
+    expenses: float
+    net: float
+
+
 class ProductionByComponentRowOut(BaseModel):
     component_type: str
     quantity: int
+    stitches: int
+    quantity_missing_stitch_count: int
 
 
 class ProductionByLotRowOut(BaseModel):
     lot_id: uuid.UUID
     lot_number: str
     quantity: int
+    stitches: int
+    quantity_missing_stitch_count: int
 
 
 class ProductionSummaryReportOut(BaseModel):
@@ -77,6 +100,12 @@ class ProductionSummaryReportOut(BaseModel):
     date_to: date
     branch_id: uuid.UUID | None
     total_quantity: int
+    # Stitch-count equivalent of total_quantity -- see app/stitch_resolution.py.
+    # quantity_missing_stitch_count is the portion of total_quantity that
+    # couldn't be converted (no DesignVariant.stitch_count set yet for that
+    # design+component).
+    total_stitches: int
+    quantity_missing_stitch_count: int
     by_component: list[ProductionByComponentRowOut]
     by_lot: list[ProductionByLotRowOut]
 

@@ -53,13 +53,21 @@ class MachinePerformanceOut(BaseModel):
     """One machine's share of total approved production over the queried
     date range (see routers/production_entries.py's performance
     endpoints). percentage_of_total is relative to the grand total of all
-    approved quantity in the same range, not to other machines' totals."""
+    approved quantity in the same range, not to other machines' totals.
+
+    total_stitches is quantity x DesignVariant.stitch_count, resolved per
+    (design, component) via app/stitch_resolution.py -- ignores colour, see
+    that module's docstring. quantity_missing_stitch_count is the portion of
+    total_quantity that couldn't be converted because no DesignVariant for
+    that design+component has a stitch_count set yet."""
 
     machine_id: uuid.UUID
     machine_code: str
     total_quantity: int
     entry_count: int
     percentage_of_total: float
+    total_stitches: int
+    quantity_missing_stitch_count: int
 
 
 class ProductionEntryStatusCountsOut(BaseModel):
@@ -77,10 +85,15 @@ class EmployeePerformanceOut(BaseModel):
     date range. total_quantity credits an employee for entries where they
     were either the operator or the helper -- both roles get full credit
     on their own totals (see [[domain_production_entry]] memory), so
-    percentages across all employees can sum to more than 100%."""
+    percentages across all employees can sum to more than 100%.
+
+    total_stitches / quantity_missing_stitch_count -- see
+    MachinePerformanceOut's docstring, same resolution logic."""
 
     employee_id: uuid.UUID
     full_name: str
     total_quantity: int
     entry_count: int
     percentage_of_total: float
+    total_stitches: int
+    quantity_missing_stitch_count: int

@@ -162,25 +162,34 @@ export default function MachineCostReportPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Machine</TableHead>
+                  <TableHead className="text-right">Stitches produced</TableHead>
                   <TableHead className="text-right">Quantity produced</TableHead>
                   <TableHead className="text-right">Overhead share</TableHead>
-                  <TableHead className="text-right">Cost per unit</TableHead>
+                  <TableHead className="text-right">Cost per stitch</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {report.machines.map((machine) => (
                   <TableRow key={machine.machine_id}>
                     <TableCell className="font-medium">{machine.machine_name ?? machine.machine_code}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {machine.total_stitches > 0 ? machine.total_stitches.toLocaleString() : "—"}
+                      {machine.quantity_missing_stitch_count > 0 && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          ({machine.quantity_missing_stitch_count} unset)
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{machine.quantity_produced}</TableCell>
                     <TableCell className="text-right tabular-nums">{machine.overhead_share.toFixed(2)}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {machine.cost_per_unit === null ? "—" : machine.cost_per_unit.toFixed(2)}
+                      {machine.cost_per_stitch === null ? "—" : machine.cost_per_stitch.toFixed(4)}
                     </TableCell>
                   </TableRow>
                 ))}
                 {report.machines.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       No active machines in scope.
                     </TableCell>
                   </TableRow>

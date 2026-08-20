@@ -128,18 +128,36 @@ export default function ProductionSummaryReportPage() {
 
       {!error && report !== null && (
         <>
-          <Card className="max-w-xs">
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Total quantity produced</p>
-              <p className="text-lg font-semibold tabular-nums">{report.total_quantity.toLocaleString()}</p>
-            </CardContent>
-          </Card>
+          <div className="flex flex-wrap gap-4">
+            <Card className="max-w-xs">
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Total stitches produced</p>
+                <p className="text-lg font-semibold tabular-nums">
+                  {report.total_stitches > 0
+                    ? report.total_stitches.toLocaleString()
+                    : "—"}
+                </p>
+                {report.quantity_missing_stitch_count > 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {report.quantity_missing_stitch_count.toLocaleString()} of{" "}
+                    {report.total_quantity.toLocaleString()} units have no stitch count set
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="max-w-xs">
+              <CardContent>
+                <p className="text-sm text-muted-foreground">Total quantity produced</p>
+                <p className="text-lg font-semibold tabular-nums">{report.total_quantity.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+          </div>
 
           {report.by_component.length > 0 && (
             <CategoricalBarChart
               data={report.by_component.map((row) => ({
                 label: row.component_type.charAt(0).toUpperCase() + row.component_type.slice(1),
-                value: row.quantity,
+                value: row.stitches > 0 ? row.stitches : row.quantity,
               }))}
             />
           )}
@@ -152,6 +170,7 @@ export default function ProductionSummaryReportPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Component</TableHead>
+                      <TableHead className="text-right">Stitches</TableHead>
                       <TableHead className="text-right">Quantity</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -159,12 +178,15 @@ export default function ProductionSummaryReportPage() {
                     {report.by_component.map((row) => (
                       <TableRow key={row.component_type}>
                         <TableCell className="capitalize">{row.component_type}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {row.stitches > 0 ? row.stitches.toLocaleString() : "—"}
+                        </TableCell>
                         <TableCell className="text-right tabular-nums">{row.quantity}</TableCell>
                       </TableRow>
                     ))}
                     {report.by_component.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={2} className="text-center text-muted-foreground">
+                        <TableCell colSpan={3} className="text-center text-muted-foreground">
                           No approved production in this period.
                         </TableCell>
                       </TableRow>
@@ -181,6 +203,7 @@ export default function ProductionSummaryReportPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Lot</TableHead>
+                      <TableHead className="text-right">Stitches</TableHead>
                       <TableHead className="text-right">Quantity</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -192,12 +215,15 @@ export default function ProductionSummaryReportPage() {
                             {row.lot_number}
                           </Link>
                         </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {row.stitches > 0 ? row.stitches.toLocaleString() : "—"}
+                        </TableCell>
                         <TableCell className="text-right tabular-nums">{row.quantity}</TableCell>
                       </TableRow>
                     ))}
                     {report.by_lot.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={2} className="text-center text-muted-foreground">
+                        <TableCell colSpan={3} className="text-center text-muted-foreground">
                           No approved production in this period.
                         </TableCell>
                       </TableRow>

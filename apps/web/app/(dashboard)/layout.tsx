@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { getFactory } from "@embroidery/types";
 
+import { BackButton } from "@/components/nav/BackButton";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -56,7 +57,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className="flex-1 p-8">{children}</main>
+      <main className="flex-1 p-8">
+        <BackButton />
+        {children}
+      </main>
     </div>
   );
 }

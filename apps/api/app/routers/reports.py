@@ -20,6 +20,7 @@ Ageing (party side) is fully computable via the existing
 Payment/PaymentAllocation system and is implemented below.
 """
 
+import calendar
 import uuid
 from datetime import date
 
@@ -52,6 +53,7 @@ from app.routers.payments import _invoice_paid_amount, _invoice_total
 from app.schemas.reports import (
     AgeingBuckets,
     FinancialSummaryReportOut,
+    FinancialTrendPointOut,
     InventoryMovementReportOut,
     InventoryMovementRowOut,
     MachineCostReportOut,
@@ -62,6 +64,7 @@ from app.schemas.reports import (
     ReceivableAgeingReportOut,
     ReceivableAgeingRowOut,
 )
+from app.stitch_resolution import resolve_stitch_counts
 
 router = APIRouter()
 
@@ -109,38 +112,65 @@ def get_machine_cost_report(
 
     overhead_share = round(total_overhead / len(machines), 2) if machines else 0.0
 
-    quantity_by_machine: dict[uuid.UUID, int] = {}
+    # Grouped down to (machine, design, component) rather than just machine,
+    # since stitch_count resolution (app/stitch_resolution.py) is keyed on
+    # design+component.
+    machine_totals: dict[uuid.UUID, dict[str, int]] = {}
     if machines:
         rows = (
             db.query(
                 ProductionJobMachineAllocation.machine_id,
-                func.coalesce(func.sum(MachineProductionEntry.quantity), 0),
+                ProductionJob.design_id,
+                ProductionJobComponent.component_type,
+                func.sum(MachineProductionEntry.quantity).label("total_quantity"),
             )
             .join(
                 MachineProductionEntry,
                 MachineProductionEntry.production_job_machine_allocation_id == ProductionJobMachineAllocation.id,
             )
+            .join(
+                ProductionJobComponent,
+                ProductionJobMachineAllocation.production_job_component_id == ProductionJobComponent.id,
+            )
+            .join(ProductionJob, ProductionJobComponent.production_job_id == ProductionJob.id)
             .filter(
                 MachineProductionEntry.status == "approved",
                 MachineProductionEntry.entry_date >= date_from,
                 MachineProductionEntry.entry_date <= date_to,
                 ProductionJobMachineAllocation.machine_id.in_([m.id for m in machines]),
             )
-            .group_by(ProductionJobMachineAllocation.machine_id)
+            .group_by(ProductionJobMachineAllocation.machine_id, ProductionJob.design_id, ProductionJobComponent.component_type)
             .all()
         )
-        quantity_by_machine = {machine_id: int(qty) for machine_id, qty in rows}
+        stitch_map = resolve_stitch_counts(db, {(design_id, component_type) for _, design_id, component_type, _ in rows})
+        for machine_id, design_id, component_type, total_quantity in rows:
+            bucket = machine_totals.setdefault(
+                machine_id, {"quantity_produced": 0, "total_stitches": 0, "quantity_missing_stitch_count": 0}
+            )
+            bucket["quantity_produced"] += total_quantity
+            stitch_count = stitch_map.get((design_id, component_type))
+            if stitch_count:
+                bucket["total_stitches"] += total_quantity * stitch_count
+            else:
+                bucket["quantity_missing_stitch_count"] += total_quantity
 
     machine_rows = [
         MachineCostRowOut(
             machine_id=machine.id,
             machine_code=machine.code,
             machine_name=machine.name,
-            quantity_produced=quantity_by_machine.get(machine.id, 0),
+            quantity_produced=machine_totals.get(machine.id, {}).get("quantity_produced", 0),
             overhead_share=overhead_share,
             cost_per_unit=(
-                round(overhead_share / quantity_by_machine[machine.id], 2)
-                if quantity_by_machine.get(machine.id)
+                round(overhead_share / machine_totals[machine.id]["quantity_produced"], 2)
+                if machine_totals.get(machine.id, {}).get("quantity_produced")
+                else None
+            ),
+            total_stitches=machine_totals.get(machine.id, {}).get("total_stitches", 0),
+            quantity_missing_stitch_count=machine_totals.get(machine.id, {}).get("quantity_missing_stitch_count", 0),
+            cost_per_stitch=(
+                round(overhead_share / machine_totals[machine.id]["total_stitches"], 4)
+                if machine_totals.get(machine.id, {}).get("total_stitches")
                 else None
             ),
         )
@@ -274,6 +304,40 @@ def get_financial_summary_report(
 
 
 @router.get(
+    "/reports/financial/trend", response_model=list[FinancialTrendPointOut], operation_id="getFinancialTrendReport"
+)
+def get_financial_trend_report(
+    months: int = Query(12, ge=1, le=24),
+    branch_id: uuid.UUID | None = Query(None),
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_permission("reports.view")),
+) -> list[FinancialTrendPointOut]:
+    """One point per calendar month, oldest first, ending with the current
+    (partial) month -- reuses compute_financial_summary per month rather
+    than a separate GROUP-BY-month query, so the trend line's math can never
+    drift from the summary cards above it on the Dashboard."""
+    today = date.today()
+    points: list[FinancialTrendPointOut] = []
+    for offset in range(months - 1, -1, -1):
+        total_month_index = today.year * 12 + (today.month - 1) - offset
+        year, month = divmod(total_month_index, 12)
+        month += 1
+        month_start = date(year, month, 1)
+        month_end = date(year, month, calendar.monthrange(year, month)[1])
+        summary = compute_financial_summary(db, month_start, month_end, branch_id)
+        points.append(
+            FinancialTrendPointOut(
+                year=year,
+                month=month,
+                revenue=summary.revenue,
+                expenses=round(summary.expenses + summary.purchases, 2),
+                net=summary.net,
+            )
+        )
+    return points
+
+
+@router.get(
     "/reports/production/summary", response_model=ProductionSummaryReportOut, operation_id="getProductionSummaryReport"
 )
 def get_production_summary_report(
@@ -289,6 +353,7 @@ def get_production_summary_report(
     query = (
         db.query(
             ProductionJobComponent.component_type,
+            ProductionJob.design_id,
             Lot.id,
             Lot.lot_number,
             MachineProductionEntry.quantity,
@@ -317,21 +382,55 @@ def get_production_summary_report(
     rows = query.all()
     total_quantity = sum(row.quantity for row in rows)
 
-    component_totals: dict[str, int] = {}
-    lot_totals: dict[uuid.UUID, list] = {}
-    for component_type, lot_id, lot_number, quantity in rows:
-        component_totals[component_type] = component_totals.get(component_type, 0) + quantity
+    stitch_map = resolve_stitch_counts(db, {(design_id, component_type) for component_type, design_id, *_ in rows})
+
+    def _stitches_for(design_id: uuid.UUID, component_type: str, quantity: int) -> tuple[int, int]:
+        stitch_count = stitch_map.get((design_id, component_type))
+        if stitch_count:
+            return quantity * stitch_count, 0
+        return 0, quantity
+
+    total_stitches = 0
+    total_missing = 0
+    component_totals: dict[str, dict[str, int]] = {}
+    lot_totals: dict[uuid.UUID, dict[str, int | str]] = {}
+    for component_type, design_id, lot_id, lot_number, quantity in rows:
+        stitches, missing = _stitches_for(design_id, component_type, quantity)
+        total_stitches += stitches
+        total_missing += missing
+
+        comp_bucket = component_totals.setdefault(
+            component_type, {"quantity": 0, "stitches": 0, "quantity_missing_stitch_count": 0}
+        )
+        comp_bucket["quantity"] += quantity
+        comp_bucket["stitches"] += stitches
+        comp_bucket["quantity_missing_stitch_count"] += missing
+
         if lot_id not in lot_totals:
-            lot_totals[lot_id] = [lot_number, 0]
-        lot_totals[lot_id][1] += quantity
+            lot_totals[lot_id] = {"lot_number": lot_number, "quantity": 0, "stitches": 0, "quantity_missing_stitch_count": 0}
+        lot_bucket = lot_totals[lot_id]
+        lot_bucket["quantity"] += quantity
+        lot_bucket["stitches"] += stitches
+        lot_bucket["quantity_missing_stitch_count"] += missing
 
     by_component = [
-        ProductionByComponentRowOut(component_type=component_type, quantity=quantity)
-        for component_type, quantity in sorted(component_totals.items())
+        ProductionByComponentRowOut(
+            component_type=component_type,
+            quantity=bucket["quantity"],
+            stitches=bucket["stitches"],
+            quantity_missing_stitch_count=bucket["quantity_missing_stitch_count"],
+        )
+        for component_type, bucket in sorted(component_totals.items())
     ]
     by_lot = [
-        ProductionByLotRowOut(lot_id=lot_id, lot_number=lot_number, quantity=quantity)
-        for lot_id, (lot_number, quantity) in sorted(lot_totals.items(), key=lambda item: item[1][1], reverse=True)
+        ProductionByLotRowOut(
+            lot_id=lot_id,
+            lot_number=bucket["lot_number"],
+            quantity=bucket["quantity"],
+            stitches=bucket["stitches"],
+            quantity_missing_stitch_count=bucket["quantity_missing_stitch_count"],
+        )
+        for lot_id, bucket in sorted(lot_totals.items(), key=lambda item: item[1]["quantity"], reverse=True)
     ]
 
     return ProductionSummaryReportOut(
@@ -339,6 +438,8 @@ def get_production_summary_report(
         date_to=date_to,
         branch_id=branch_id,
         total_quantity=total_quantity,
+        total_stitches=total_stitches,
+        quantity_missing_stitch_count=total_missing,
         by_component=by_component,
         by_lot=by_lot,
     )

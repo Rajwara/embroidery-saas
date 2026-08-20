@@ -14,12 +14,14 @@ import {
 
 import {
   getFinancialSummaryReport,
+  getFinancialTrendReport,
   listInvoices,
   listParties,
   listPayments,
 } from "@embroidery/types";
 import type {
   FinancialSummaryReportOut,
+  FinancialTrendPointOut,
   InvoiceOut,
   PartyDocsOut,
   PaymentOut,
@@ -29,7 +31,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FinancialSummaryChart } from "@/components/FinancialSummaryChart";
+import { FinancialTrendChart } from "@/components/FinancialTrendChart";
 
 function firstOfMonth(): string {
   const now = new Date();
@@ -60,6 +62,7 @@ export default function DashboardPage() {
   const canSeePayments = hasPermission("payments.view");
 
   const [financial, setFinancial] = useState<FinancialSummaryReportOut | null>(null);
+  const [trend, setTrend] = useState<FinancialTrendPointOut[] | null>(null);
   const [activity, setActivity] = useState<ActivityItem[] | null>(null);
 
   const loadReports = useCallback(() => {
@@ -73,6 +76,9 @@ export default function DashboardPage() {
         // rest of the page; leave financial at null (skeleton) rather than
         // showing an error state for a non-critical section.
       });
+    getFinancialTrendReport({ months: 12 })
+      .then(setTrend)
+      .catch(() => {});
   }, [canSeeReports]);
 
   const loadActivity = useCallback(() => {
@@ -146,10 +152,10 @@ export default function DashboardPage() {
             />
           </div>
 
-          {financial === null ? (
-            <Skeleton className="h-40 w-full rounded-xl" />
+          {trend === null ? (
+            <Skeleton className="h-72 w-full rounded-xl" />
           ) : (
-            <FinancialSummaryChart revenue={financial.revenue} expenses={financial.expenses} purchases={financial.purchases} />
+            <FinancialTrendChart points={trend} />
           )}
         </>
       )}

@@ -12,6 +12,7 @@ from app.models import (
     Employee,
     Machine,
     MachineProductionEntry,
+    ProductionJob,
     ProductionJobComponent,
     ProductionJobMachineAllocation,
     User,
@@ -24,6 +25,7 @@ from app.schemas.production_entry import (
     ProductionEntryStatusCountsOut,
     RejectEntryRequest,
 )
+from app.stitch_resolution import resolve_stitch_counts
 
 router = APIRouter()
 
@@ -151,9 +153,15 @@ def get_machine_performance(
 
     grand_total = db.query(func.coalesce(func.sum(MachineProductionEntry.quantity), 0)).filter(*filters).scalar()
 
+    # Grouped down to (machine, design, component) rather than just machine,
+    # since stitch_count resolution (app/stitch_resolution.py) is keyed on
+    # design+component -- a machine can touch multiple designs/components in
+    # the same date range, each with its own stitch count.
     rows = (
         db.query(
             ProductionJobMachineAllocation.machine_id,
+            ProductionJob.design_id,
+            ProductionJobComponent.component_type,
             func.sum(MachineProductionEntry.quantity).label("total_quantity"),
             func.count(MachineProductionEntry.id).label("entry_count"),
         )
@@ -161,23 +169,45 @@ def get_machine_performance(
             ProductionJobMachineAllocation,
             MachineProductionEntry.production_job_machine_allocation_id == ProductionJobMachineAllocation.id,
         )
+        .join(
+            ProductionJobComponent,
+            ProductionJobMachineAllocation.production_job_component_id == ProductionJobComponent.id,
+        )
+        .join(ProductionJob, ProductionJobComponent.production_job_id == ProductionJob.id)
         .filter(*filters)
-        .group_by(ProductionJobMachineAllocation.machine_id)
+        .group_by(ProductionJobMachineAllocation.machine_id, ProductionJob.design_id, ProductionJobComponent.component_type)
         .all()
     )
 
-    machine_ids = [r.machine_id for r in rows]
+    stitch_map = resolve_stitch_counts(db, {(design_id, component_type) for _, design_id, component_type, _, _ in rows})
+
+    machine_totals: dict[uuid.UUID, dict[str, int]] = {}
+    for machine_id, design_id, component_type, total_quantity, entry_count in rows:
+        bucket = machine_totals.setdefault(
+            machine_id, {"total_quantity": 0, "entry_count": 0, "total_stitches": 0, "quantity_missing_stitch_count": 0}
+        )
+        bucket["total_quantity"] += total_quantity
+        bucket["entry_count"] += entry_count
+        stitch_count = stitch_map.get((design_id, component_type))
+        if stitch_count:
+            bucket["total_stitches"] += total_quantity * stitch_count
+        else:
+            bucket["quantity_missing_stitch_count"] += total_quantity
+
+    machine_ids = list(machine_totals.keys())
     machines = {m.id: m for m in db.query(Machine).filter(Machine.id.in_(machine_ids)).all()} if machine_ids else {}
 
     results = [
         MachinePerformanceOut(
             machine_id=machine_id,
             machine_code=machines[machine_id].code,
-            total_quantity=total_quantity,
-            entry_count=entry_count,
-            percentage_of_total=round(total_quantity / grand_total * 100, 1) if grand_total else 0.0,
+            total_quantity=bucket["total_quantity"],
+            entry_count=bucket["entry_count"],
+            percentage_of_total=round(bucket["total_quantity"] / grand_total * 100, 1) if grand_total else 0.0,
+            total_stitches=bucket["total_stitches"],
+            quantity_missing_stitch_count=bucket["quantity_missing_stitch_count"],
         )
-        for machine_id, total_quantity, entry_count in rows
+        for machine_id, bucket in machine_totals.items()
     ]
     results.sort(key=lambda r: r.total_quantity, reverse=True)
     return results
@@ -199,33 +229,59 @@ def get_employee_performance(
     # Both operator and helper get full credit on their own totals for a
     # shared entry (see [[domain_production_entry]] memory) -- summed from
     # two separate group-bys rather than a single query, since an entry
-    # contributes to two different employees' totals at once.
-    operator_rows = (
-        db.query(
-            MachineProductionEntry.operator_employee_id.label("employee_id"),
-            func.sum(MachineProductionEntry.quantity).label("total_quantity"),
-            func.count(MachineProductionEntry.id).label("entry_count"),
+    # contributes to two different employees' totals at once. Grouped down
+    # to (employee, design, component) for the same reason as
+    # get_machine_performance -- stitch resolution is keyed on design+component.
+    design_component_join = (
+        lambda q: q.join(
+            ProductionJobMachineAllocation,
+            MachineProductionEntry.production_job_machine_allocation_id == ProductionJobMachineAllocation.id,
         )
-        .filter(*filters)
-        .group_by(MachineProductionEntry.operator_employee_id)
-        .all()
-    )
-    helper_rows = (
-        db.query(
-            MachineProductionEntry.helper_employee_id.label("employee_id"),
-            func.sum(MachineProductionEntry.quantity).label("total_quantity"),
-            func.count(MachineProductionEntry.id).label("entry_count"),
+        .join(
+            ProductionJobComponent,
+            ProductionJobMachineAllocation.production_job_component_id == ProductionJobComponent.id,
         )
-        .filter(*filters, MachineProductionEntry.helper_employee_id.isnot(None))
-        .group_by(MachineProductionEntry.helper_employee_id)
-        .all()
+        .join(ProductionJob, ProductionJobComponent.production_job_id == ProductionJob.id)
     )
 
+    operator_rows = design_component_join(
+        db.query(
+            MachineProductionEntry.operator_employee_id.label("employee_id"),
+            ProductionJob.design_id,
+            ProductionJobComponent.component_type,
+            func.sum(MachineProductionEntry.quantity).label("total_quantity"),
+            func.count(MachineProductionEntry.id).label("entry_count"),
+        )
+    ).filter(*filters).group_by(
+        MachineProductionEntry.operator_employee_id, ProductionJob.design_id, ProductionJobComponent.component_type
+    ).all()
+    helper_rows = design_component_join(
+        db.query(
+            MachineProductionEntry.helper_employee_id.label("employee_id"),
+            ProductionJob.design_id,
+            ProductionJobComponent.component_type,
+            func.sum(MachineProductionEntry.quantity).label("total_quantity"),
+            func.count(MachineProductionEntry.id).label("entry_count"),
+        )
+    ).filter(*filters, MachineProductionEntry.helper_employee_id.isnot(None)).group_by(
+        MachineProductionEntry.helper_employee_id, ProductionJob.design_id, ProductionJobComponent.component_type
+    ).all()
+
+    all_rows = [*operator_rows, *helper_rows]
+    stitch_map = resolve_stitch_counts(db, {(design_id, component_type) for _, design_id, component_type, _, _ in all_rows})
+
     totals: dict[uuid.UUID, dict[str, int]] = {}
-    for employee_id, total_quantity, entry_count in [*operator_rows, *helper_rows]:
-        bucket = totals.setdefault(employee_id, {"total_quantity": 0, "entry_count": 0})
+    for employee_id, design_id, component_type, total_quantity, entry_count in all_rows:
+        bucket = totals.setdefault(
+            employee_id, {"total_quantity": 0, "entry_count": 0, "total_stitches": 0, "quantity_missing_stitch_count": 0}
+        )
         bucket["total_quantity"] += total_quantity
         bucket["entry_count"] += entry_count
+        stitch_count = stitch_map.get((design_id, component_type))
+        if stitch_count:
+            bucket["total_stitches"] += total_quantity * stitch_count
+        else:
+            bucket["quantity_missing_stitch_count"] += total_quantity
 
     employees = {e.id: e for e in db.query(Employee).filter(Employee.id.in_(totals.keys())).all()} if totals else {}
 
@@ -236,6 +292,8 @@ def get_employee_performance(
             total_quantity=bucket["total_quantity"],
             entry_count=bucket["entry_count"],
             percentage_of_total=round(bucket["total_quantity"] / grand_total * 100, 1) if grand_total else 0.0,
+            total_stitches=bucket["total_stitches"],
+            quantity_missing_stitch_count=bucket["quantity_missing_stitch_count"],
         )
         for employee_id, bucket in totals.items()
     ]

@@ -396,6 +396,9 @@ date range. total_quantity credits an employee for entries where they
 were either the operator or the helper -- both roles get full credit
 on their own totals (see [[domain_production_entry]] memory), so
 percentages across all employees can sum to more than 100%.
+
+total_stitches / quantity_missing_stitch_count -- see
+MachinePerformanceOut's docstring, same resolution logic.
  */
 export interface EmployeePerformanceOut {
   employee_id: string;
@@ -403,6 +406,8 @@ export interface EmployeePerformanceOut {
   total_quantity: number;
   entry_count: number;
   percentage_of_total: number;
+  total_stitches: number;
+  quantity_missing_stitch_count: number;
 }
 
 export type EmployeeSalaryProfileCreateRequestNotes = string | null;
@@ -665,6 +670,20 @@ export interface FinancialSummaryReportOut {
   purchases: number;
   net: number;
   cash_received: number;
+}
+
+/**
+ * One calendar month's summary -- same revenue/expenses/net formulas as
+FinancialSummaryReportOut (expenses here is already expenses+purchases
+combined, matching the Dashboard stat card's definition of "Expenses"),
+just computed per-month instead of over one arbitrary range.
+ */
+export interface FinancialTrendPointOut {
+  year: number;
+  month: number;
+  revenue: number;
+  expenses: number;
+  net: number;
 }
 
 export interface ForgotPasswordRequest {
@@ -1025,6 +1044,8 @@ export type MachineCostRowOutMachineName = string | null;
 
 export type MachineCostRowOutCostPerUnit = number | null;
 
+export type MachineCostRowOutCostPerStitch = number | null;
+
 export interface MachineCostRowOut {
   machine_id: string;
   machine_code: string;
@@ -1032,6 +1053,9 @@ export interface MachineCostRowOut {
   quantity_produced: number;
   overhead_share: number;
   cost_per_unit: MachineCostRowOutCostPerUnit;
+  total_stitches: number;
+  quantity_missing_stitch_count: number;
+  cost_per_stitch: MachineCostRowOutCostPerStitch;
 }
 
 export type MachineCreateRequestName = string | null;
@@ -1095,6 +1119,12 @@ export interface MachineOut {
 date range (see routers/production_entries.py's performance
 endpoints). percentage_of_total is relative to the grand total of all
 approved quantity in the same range, not to other machines' totals.
+
+total_stitches is quantity x DesignVariant.stitch_count, resolved per
+(design, component) via app/stitch_resolution.py -- ignores colour, see
+that module's docstring. quantity_missing_stitch_count is the portion of
+total_quantity that couldn't be converted because no DesignVariant for
+that design+component has a stitch_count set yet.
  */
 export interface MachinePerformanceOut {
   machine_id: string;
@@ -1102,6 +1132,8 @@ export interface MachinePerformanceOut {
   total_quantity: number;
   entry_count: number;
   percentage_of_total: number;
+  total_stitches: number;
+  quantity_missing_stitch_count: number;
 }
 
 export type MachineProductionEntryCreateRequestShift = typeof MachineProductionEntryCreateRequestShift[keyof typeof MachineProductionEntryCreateRequestShift];
@@ -1458,12 +1490,16 @@ export interface PlatformDashboardOut {
 export interface ProductionByComponentRowOut {
   component_type: string;
   quantity: number;
+  stitches: number;
+  quantity_missing_stitch_count: number;
 }
 
 export interface ProductionByLotRowOut {
   lot_id: string;
   lot_number: string;
   quantity: number;
+  stitches: number;
+  quantity_missing_stitch_count: number;
 }
 
 /**
@@ -1537,6 +1573,8 @@ export interface ProductionSummaryReportOut {
   date_to: string;
   branch_id: ProductionSummaryReportOutBranchId;
   total_quantity: number;
+  total_stitches: number;
+  quantity_missing_stitch_count: number;
   by_component: ProductionByComponentRowOut[];
   by_lot: ProductionByLotRowOut[];
 }
@@ -2431,6 +2469,15 @@ as_of?: string | null;
 export type GetFinancialSummaryReportParams = {
 date_from: string;
 date_to: string;
+branch_id?: string | null;
+};
+
+export type GetFinancialTrendReportParams = {
+/**
+ * @minimum 1
+ * @maximum 24
+ */
+months?: number;
 branch_id?: string | null;
 };
 
@@ -5706,6 +5753,41 @@ export const getGetFinancialSummaryReportUrl = (params: GetFinancialSummaryRepor
 export const getFinancialSummaryReport = async (params: GetFinancialSummaryReportParams, options?: RequestInit): Promise<FinancialSummaryReportOut> => {
   
   return apiMutator<FinancialSummaryReportOut>(getGetFinancialSummaryReportUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+/**
+ * One point per calendar month, oldest first, ending with the current
+(partial) month -- reuses compute_financial_summary per month rather
+than a separate GROUP-BY-month query, so the trend line's math can never
+drift from the summary cards above it on the Dashboard.
+ * @summary Get Financial Trend Report
+ */
+export const getGetFinancialTrendReportUrl = (params?: GetFinancialTrendReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/reports/financial/trend?${stringifiedParams}` : `/reports/financial/trend`
+}
+
+export const getFinancialTrendReport = async (params?: GetFinancialTrendReportParams, options?: RequestInit): Promise<FinancialTrendPointOut[]> => {
+  
+  return apiMutator<FinancialTrendPointOut[]>(getGetFinancialTrendReportUrl(params),
   {      
     ...options,
     method: 'GET'
