@@ -817,6 +817,10 @@ export interface InvoiceCreateRequest {
 
 export type InvoiceDetailOutDueDate = string | null;
 
+export type InvoiceDetailOutPromisedPaymentDate = string | null;
+
+export type InvoiceDetailOutPromisedPaymentMethod = string | null;
+
 export type InvoiceDetailOutNotes = string | null;
 
 /**
@@ -831,6 +835,8 @@ export interface InvoiceDetailOut {
   invoice_number: string;
   invoice_date: string;
   due_date: InvoiceDetailOutDueDate;
+  promised_payment_date: InvoiceDetailOutPromisedPaymentDate;
+  promised_payment_method: InvoiceDetailOutPromisedPaymentMethod;
   notes: InvoiceDetailOutNotes;
   total_amount: number;
   lines: InvoiceLineItemOut[];
@@ -883,6 +889,10 @@ export interface InvoiceLineItemOut {
 
 export type InvoiceOutDueDate = string | null;
 
+export type InvoiceOutPromisedPaymentDate = string | null;
+
+export type InvoiceOutPromisedPaymentMethod = string | null;
+
 export type InvoiceOutNotes = string | null;
 
 export interface InvoiceOut {
@@ -892,8 +902,19 @@ export interface InvoiceOut {
   invoice_number: string;
   invoice_date: string;
   due_date: InvoiceOutDueDate;
+  promised_payment_date: InvoiceOutPromisedPaymentDate;
+  promised_payment_method: InvoiceOutPromisedPaymentMethod;
   notes: InvoiceOutNotes;
   total_amount: number;
+}
+
+export type InvoiceUpdateRequestPromisedPaymentDate = string | null;
+
+export type InvoiceUpdateRequestPromisedPaymentMethod = 'cash' | 'bank_transfer' | 'cheque' | 'other' | null;
+
+export interface InvoiceUpdateRequest {
+  promised_payment_date?: InvoiceUpdateRequestPromisedPaymentDate;
+  promised_payment_method?: InvoiceUpdateRequestPromisedPaymentMethod;
 }
 
 export type LedgerEntryOutEntryType = typeof LedgerEntryOutEntryType[keyof typeof LedgerEntryOutEntryType];
@@ -1569,6 +1590,18 @@ export interface PaymentOut {
   amount: number;
   payment_method: string;
   notes: PaymentOutNotes;
+}
+
+export type PaymentUpdateRequestPaymentDate = string | null;
+
+export type PaymentUpdateRequestPaymentMethod = 'cash' | 'bank_transfer' | 'cheque' | 'other' | null;
+
+export type PaymentUpdateRequestNotes = string | null;
+
+export interface PaymentUpdateRequest {
+  payment_date?: PaymentUpdateRequestPaymentDate;
+  payment_method?: PaymentUpdateRequestPaymentMethod;
+  notes?: PaymentUpdateRequestNotes;
 }
 
 export interface PayrollEntryOut {
@@ -4962,6 +4995,32 @@ export const getInvoice = async (invoiceId: string, options?: RequestInit): Prom
 
 
 /**
+ * @summary Update Invoice
+ */
+export const getUpdateInvoiceUrl = (invoiceId: string,) => {
+
+
+  
+
+  return `/invoices/${invoiceId}`
+}
+
+export const updateInvoice = async (invoiceId: string,
+    invoiceUpdateRequest: InvoiceUpdateRequest, options?: RequestInit): Promise<InvoiceDetailOut> => {
+  
+  return apiMutator<InvoiceDetailOut>(getUpdateInvoiceUrl(invoiceId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      invoiceUpdateRequest,)
+  }
+);}
+
+
+
+/**
  * @summary Get Invoice Pdf
  */
 export const getGetInvoicePdfUrl = (invoiceId: string,) => {
@@ -5067,6 +5126,32 @@ export const createPayment = async (paymentCreateRequest: PaymentCreateRequest, 
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       paymentCreateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Update Payment
+ */
+export const getUpdatePaymentUrl = (paymentId: string,) => {
+
+
+  
+
+  return `/payments/${paymentId}`
+}
+
+export const updatePayment = async (paymentId: string,
+    paymentUpdateRequest: PaymentUpdateRequest, options?: RequestInit): Promise<PaymentDetailOut> => {
+  
+  return apiMutator<PaymentDetailOut>(getUpdatePaymentUrl(paymentId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      paymentUpdateRequest,)
   }
 );}
 

@@ -17,6 +17,7 @@ from app.schemas.invoice import (
     InvoiceLineItemCreateRequest,
     InvoiceLineItemOut,
     InvoiceOut,
+    InvoiceUpdateRequest,
 )
 
 router = APIRouter()
@@ -80,6 +81,8 @@ def _to_invoice_out(invoice: Invoice, total_amount: float) -> InvoiceOut:
         invoice_number=invoice.invoice_number,
         invoice_date=invoice.invoice_date,
         due_date=invoice.due_date,
+        promised_payment_date=invoice.promised_payment_date,
+        promised_payment_method=invoice.promised_payment_method,
         notes=invoice.notes,
         total_amount=total_amount,
     )
@@ -238,6 +241,48 @@ def get_invoice(
     invoice = db.get(Invoice, invoice_id)
     if invoice is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="invoice_not_found")
+    return _build_invoice_detail(db, invoice)
+
+
+@router.patch("/{invoice_id}", response_model=InvoiceDetailOut, operation_id="updateInvoice")
+def update_invoice(
+    invoice_id: uuid.UUID,
+    payload: InvoiceUpdateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("invoices.edit")),
+) -> InvoiceDetailOut:
+    invoice = db.get(Invoice, invoice_id)
+    if invoice is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="invoice_not_found")
+
+    old_values: dict = {}
+    new_values: dict = {}
+    for field, value in payload.model_dump(exclude_none=True).items():
+        current = getattr(invoice, field)
+        if current != value:
+            old_values[field] = str(current) if current is not None else None
+            new_values[field] = str(value) if value is not None else None
+        setattr(invoice, field, value)
+
+    if new_values:
+        ip_address, user_agent = client_meta(request)
+        record_audit(
+            db,
+            tenant_id=user.tenant_id,
+            actor_user_id=user.id,
+            action="update",
+            entity_type="invoice",
+            entity_id=invoice.id,
+            old_values=old_values,
+            new_values=new_values,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(invoice)
     return _build_invoice_detail(db, invoice)
 
 

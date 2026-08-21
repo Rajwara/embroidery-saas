@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from app.schemas.payment import PaymentMethod
+
 PricingType = Literal["per_suit", "stitch_based"]
 
 
@@ -27,6 +29,17 @@ class InvoiceCreateRequest(BaseModel):
     notes: str | None = None
     lines: list[InvoiceLineItemCreateRequest]
     # invoice_number excluded -- server-assigned, same pattern as Lot.lot_number.
+    # promised_payment_date excluded -- not set at creation, only via PATCH
+    # once the party has actually made a promise.
+
+
+class InvoiceUpdateRequest(BaseModel):
+    # PATCH semantics: None means "don't touch this field", matching
+    # schemas/party.py's PartyUpdateRequest convention. The only fields
+    # editable today are the promised_payment_* pair -- due_date/notes/lines
+    # are fixed at creation (see Invoice's docstring).
+    promised_payment_date: date | None = None
+    promised_payment_method: PaymentMethod | None = None
 
 
 class InvoiceLineItemOut(BaseModel):
@@ -51,6 +64,8 @@ class InvoiceOut(BaseModel):
     invoice_number: str
     invoice_date: date
     due_date: date | None
+    promised_payment_date: date | None
+    promised_payment_method: str | None
     notes: str | None
     # Denormalized read-only convenience field -- summed by the router
     # (see routers/invoices.py's _to_invoice_out), not a stored column.

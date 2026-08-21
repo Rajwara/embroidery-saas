@@ -16,6 +16,7 @@ from app.schemas.payment import (
     PaymentCreateRequest,
     PaymentDetailOut,
     PaymentOut,
+    PaymentUpdateRequest,
 )
 
 router = APIRouter()
@@ -213,6 +214,48 @@ def create_payment(
         ip_address=ip_address,
         user_agent=user_agent,
     )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(payment)
+    return _build_payment_detail(db, payment)
+
+
+@router.patch("/{payment_id}", response_model=PaymentDetailOut, operation_id="updatePayment")
+def update_payment(
+    payment_id: uuid.UUID,
+    payload: PaymentUpdateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("payments.edit")),
+) -> PaymentDetailOut:
+    payment = db.get(Payment, payment_id)
+    if payment is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="payment_not_found")
+
+    old_values: dict = {}
+    new_values: dict = {}
+    for field, value in payload.model_dump(exclude_none=True).items():
+        current = getattr(payment, field)
+        if current != value:
+            old_values[field] = str(current) if current is not None else None
+            new_values[field] = str(value) if value is not None else None
+        setattr(payment, field, value)
+
+    if new_values:
+        ip_address, user_agent = client_meta(request)
+        record_audit(
+            db,
+            tenant_id=user.tenant_id,
+            actor_user_id=user.id,
+            action="update",
+            entity_type="payment",
+            entity_id=payment.id,
+            old_values=old_values,
+            new_values=new_values,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
 
     db.commit()
     set_tenant_context(db, str(user.tenant_id))

@@ -104,6 +104,7 @@ export default function InvoiceDetailPage(props: { params: Promise<{ id: string 
           <p className="text-sm text-muted-foreground">
             {partyName ?? "—"} &middot; {invoice.invoice_date}
             {invoice.due_date && <> &middot; due {invoice.due_date}</>}
+            {invoice.promised_payment_date && <> &middot; promised {invoice.promised_payment_date}</>}
           </p>
           {invoice.notes && <p className="mt-1 text-sm text-muted-foreground">{invoice.notes}</p>}
         </div>

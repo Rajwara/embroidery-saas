@@ -30,6 +30,18 @@ class PaymentCreateRequest(BaseModel):
     # payment_number excluded -- server-assigned, same pattern as Lot.lot_number.
 
 
+class PaymentUpdateRequest(BaseModel):
+    # PATCH semantics: None means "don't touch this field", matching
+    # schemas/party.py's PartyUpdateRequest convention. amount/allocations
+    # are deliberately not editable here -- changing amount would break the
+    # invariant that allocations sum to exactly `amount` (see
+    # [[domain_payment_allocation]] memory); that needs a dedicated re-split
+    # flow, not a plain field PATCH.
+    payment_date: date | None = None
+    payment_method: PaymentMethod | None = None
+    notes: str | None = None
+
+
 class PaymentAllocationOut(BaseModel):
     id: uuid.UUID
     payment_id: uuid.UUID
