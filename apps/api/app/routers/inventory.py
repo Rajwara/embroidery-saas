@@ -8,6 +8,7 @@ from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
 from app.models import Branch, InventoryItem, PurchaseRequired, StockTransaction, User
+from app.models.purchase_required import PURCHASE_REQUIRED_CLOSED_STATUSES
 from app.schemas.inventory import (
     InventoryItemCreateRequest,
     InventoryItemOut,
@@ -31,12 +32,12 @@ def _current_stock(db: Session, item_id: uuid.UUID) -> int:
 def maybe_open_purchase_required(db: Session, tenant_id: uuid.UUID, item: InventoryItem) -> None:
     """Auto-populate Purchase Required (ROADMAP.md item 3) if the item's
     current stock is below its minimum_threshold and there's no other open
-    (non-"received") request for it already -- never more than one open
-    request per item at a time. Shared with routers/purchases.py's
-    create_purchase, so a receipt logged via either path opens a reorder
-    request the same way instead of only the direct stock-transaction path
-    checking. Caller must flush() any pending StockTransaction first so
-    _current_stock reflects it."""
+    (non-"received", non-"rejected") request for it already -- never more
+    than one open request per item at a time. Shared with
+    routers/purchases.py's create_purchase, so a receipt logged via either
+    path opens a reorder request the same way instead of only the direct
+    stock-transaction path checking. Caller must flush() any pending
+    StockTransaction first so _current_stock reflects it."""
     new_stock = _current_stock(db, item.id)
     if new_stock >= item.minimum_threshold:
         return
@@ -44,7 +45,7 @@ def maybe_open_purchase_required(db: Session, tenant_id: uuid.UUID, item: Invent
         db.query(PurchaseRequired)
         .filter(
             PurchaseRequired.inventory_item_id == item.id,
-            PurchaseRequired.status != "received",
+            PurchaseRequired.status.not_in(PURCHASE_REQUIRED_CLOSED_STATUSES),
         )
         .first()
     )

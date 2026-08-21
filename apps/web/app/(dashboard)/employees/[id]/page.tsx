@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState, use } from "react";
 import Link from "next/link";
 
-import { AlertCircle, ClipboardList } from "lucide-react";
+import { AlertCircle, ClipboardList, Loader2 } from "lucide-react";
 
 import {
+  createAdvance,
   getEmployee,
   listAdvances,
   listBranches,
@@ -23,6 +24,7 @@ import type {
 } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,6 +72,7 @@ const MONTH_NAMES = [
 
 export default function EmployeeDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
+  const { hasPermission } = useAuth();
 
   const [employee, setEmployee] = useState<EmployeeOut | null>(null);
   const [branches, setBranches] = useState<BranchOut[]>([]);
@@ -318,6 +321,7 @@ export default function EmployeeDetailPage(props: { params: Promise<{ id: string
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="text-right">Remaining</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Reason</TableHead>
                 </TableRow>
               </TableHeader>
@@ -331,6 +335,11 @@ export default function EmployeeDetailPage(props: { params: Promise<{ id: string
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{advance.amount.toFixed(2)}</TableCell>
                     <TableCell className="text-right tabular-nums">{advance.remaining_balance.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge variant={ENTRY_STATUS_VARIANT[advance.status] ?? "secondary"} className="capitalize">
+                        {advance.status}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{advance.reason ?? "—"}</TableCell>
                   </TableRow>
                 ))}
@@ -338,7 +347,88 @@ export default function EmployeeDetailPage(props: { params: Promise<{ id: string
             </Table>
           </div>
         )}
+
+        {hasPermission("payroll.create") && (
+          <RequestAdvanceForm employeeId={employee.id} onCreated={load} />
+        )}
       </section>
     </div>
+  );
+}
+
+function RequestAdvanceForm({ employeeId, onCreated }: { employeeId: string; onCreated: () => void }) {
+  const [amount, setAmount] = useState("");
+  const [advanceDate, setAdvanceDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      await createAdvance({
+        employee_id: employeeId,
+        advance_date: advanceDate,
+        amount: Number(amount),
+        reason: reason || undefined,
+      });
+      setAmount("");
+      setReason("");
+      onCreated();
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.detail : "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md space-y-3 rounded-xl border bg-card p-4">
+      <h3 className="text-sm font-semibold">Request a cash advance</h3>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground">Amount</label>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground">Date</label>
+          <input
+            type="date"
+            value={advanceDate}
+            onChange={(e) => setAdvanceDate(e.target.value)}
+            required
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-muted-foreground">Reason (optional)</label>
+        <input
+          type="text"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        />
+      </div>
+
+      {submitError && <p className="text-xs text-destructive">{submitError}</p>}
+
+      <div className="flex justify-end">
+        <Button type="submit" size="sm" disabled={submitting || !amount}>
+          {submitting && <Loader2 className="animate-spin" />}
+          {submitting ? "Requesting..." : "Request advance"}
+        </Button>
+      </div>
+    </form>
   );
 }

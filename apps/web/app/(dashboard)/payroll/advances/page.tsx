@@ -11,8 +11,15 @@ import type { AdvanceOut, EmployeeOut } from "@embroidery/types";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const STATUS_VARIANT: Record<string, "warning" | "success" | "destructive"> = {
+  pending: "warning",
+  approved: "success",
+  rejected: "destructive",
+};
 import {
   Table,
   TableBody,
@@ -118,6 +125,7 @@ export default function AdvancesPage() {
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Remaining</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Reason</TableHead>
               </TableRow>
             </TableHeader>
@@ -138,12 +146,17 @@ export default function AdvancesPage() {
                   <TableCell className="text-muted-foreground">{advance.advance_date}</TableCell>
                   <TableCell className="text-right tabular-nums">{advance.amount.toFixed(2)}</TableCell>
                   <TableCell className="text-right tabular-nums">{advance.remaining_balance.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_VARIANT[advance.status] ?? "secondary"} className="capitalize">
+                      {advance.status}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{advance.reason ?? "—"}</TableCell>
                 </TableRow>
               ))}
               {advances.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No advances found.
                   </TableCell>
                 </TableRow>

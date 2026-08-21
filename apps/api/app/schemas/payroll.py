@@ -30,6 +30,22 @@ class AdvanceCreateRequest(BaseModel):
     advance_date: date
     amount: float
     reason: str | None = None
+    # status excluded -- always starts "pending", see Advance's docstring.
+
+
+class AdvanceUpdateRequest(BaseModel):
+    # PATCH semantics: None means "don't touch this field", matching
+    # schemas/party.py's PartyUpdateRequest convention. Only editable while
+    # status == "pending" -- enforced by the router, not here.
+    advance_date: date | None = None
+    amount: float | None = None
+    reason: str | None = None
+
+
+class RejectAdvanceRequest(BaseModel):
+    # Same optional-reason convention as production_entry.py's
+    # RejectEntryRequest.
+    reason: str | None = None
 
 
 class AdvanceInstallmentOut(BaseModel):
@@ -48,6 +64,8 @@ class AdvanceOut(BaseModel):
     advance_date: date
     amount: float
     reason: str | None
+    status: str
+    rejection_reason: str | None
     employee_name: str
     # Denormalized read-only convenience field -- computed by the router
     # from AdvanceInstallment rows, not a stored column (see Advance's

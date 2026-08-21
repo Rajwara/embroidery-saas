@@ -5,14 +5,19 @@ import Link from "next/link";
 
 import {
   advancePurchaseRequired,
+  approveAdvance,
   approveProductionEntry,
   getProductionEntryStatusCounts,
+  listAdvances,
   listPayrollRuns,
   listProductionEntries,
   listPurchaseRequired,
+  rejectAdvance,
   rejectProductionEntry,
+  rejectPurchaseRequired,
 } from "@embroidery/types";
 import type {
+  AdvanceOut,
   MachineProductionEntryOut,
   PayrollRunOut,
   ProductionEntryStatusCountsOut,
@@ -107,7 +112,160 @@ export default function ApprovalsCentrePage() {
 
       {canApproveProduction && <ProductionEntriesSection />}
       {canApprovePurchaseRequired && <PurchaseRequiredSection />}
+      {canApprovePayroll && <CashAdvancesSection />}
       {canApprovePayroll && <PayrollRunsSection />}
+    </div>
+  );
+}
+
+function CashAdvancesSection() {
+  const [advances, setAdvances] = useState<AdvanceOut[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    setError(null);
+    setAdvances(null);
+    listAdvances({ status: "pending" })
+      .then(setAdvances)
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 403) {
+          setError("You don't have permission to view advances.");
+        } else {
+          setError("Could not load advance requests.");
+        }
+      });
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const removeAdvance = (id: string) => {
+    setAdvances((prev) => (prev ? prev.filter((a) => a.id !== id) : prev));
+  };
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold">Cash Advances</h2>
+
+      {error && (
+        <div className="flex items-center gap-3 rounded bg-red-50 px-4 py-3 text-sm text-red-700">
+          <span>{error}</span>
+          <button onClick={load} className="font-medium underline">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!error && advances === null && <p className="text-sm text-gray-500">Loading...</p>}
+      {!error && advances !== null && advances.length === 0 && (
+        <p className="text-sm text-gray-500">No advance requests pending.</p>
+      )}
+
+      {!error && advances !== null && advances.length > 0 && (
+        <div className="space-y-3">
+          {advances.map((advance) => (
+            <AdvanceRow key={advance.id} advance={advance} onResolved={() => removeAdvance(advance.id)} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AdvanceRow({ advance, onResolved }: { advance: AdvanceOut; onResolved: () => void }) {
+  const [reason, setReason] = useState("");
+  const [showReject, setShowReject] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const handleApprove = async () => {
+    setActionError(null);
+    setSubmitting(true);
+    try {
+      await approveAdvance(advance.id);
+      onResolved();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.detail : "Something went wrong.");
+      setSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    setActionError(null);
+    setSubmitting(true);
+    try {
+      await rejectAdvance(advance.id, { reason: reason || undefined });
+      onResolved();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.detail : "Something went wrong.");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="rounded bg-white p-4 shadow">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm">
+          <Link href={`/employees/${advance.employee_id}`} className="font-medium hover:underline">
+            {advance.employee_name}
+          </Link>{" "}
+          requested advance of{" "}
+          <span className="font-semibold tabular-nums">{advance.amount.toFixed(2)}</span> on {advance.advance_date}
+          {advance.reason && <> &middot; {advance.reason}</>}
+        </div>
+
+        {!showReject && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowReject(true)}
+              disabled={submitting}
+              className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              onClick={handleApprove}
+              disabled={submitting}
+              className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {submitting ? "..." : "Approve"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showReject && (
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Reason (optional)"
+            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-xs"
+          />
+          <button
+            type="button"
+            onClick={() => setShowReject(false)}
+            disabled={submitting}
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleReject}
+            disabled={submitting}
+            className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {submitting ? "..." : "Confirm reject"}
+          </button>
+        </div>
+      )}
+
+      {actionError && <p className="mt-2 text-xs text-red-600">{actionError}</p>}
     </div>
   );
 }
@@ -404,6 +562,8 @@ function PurchaseRequiredSection() {
 }
 
 function PurchaseRequiredRow({ row, onResolved }: { row: PurchaseRequiredOut; onResolved: () => void }) {
+  const [reason, setReason] = useState("");
+  const [showReject, setShowReject] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -419,6 +579,18 @@ function PurchaseRequiredRow({ row, onResolved }: { row: PurchaseRequiredOut; on
     }
   };
 
+  const handleReject = async () => {
+    setActionError(null);
+    setSubmitting(true);
+    try {
+      await rejectPurchaseRequired(row.id, { reason: reason || undefined });
+      onResolved();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.detail : "Something went wrong.");
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="rounded bg-white p-4 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -427,16 +599,57 @@ function PurchaseRequiredRow({ row, onResolved }: { row: PurchaseRequiredOut; on
           <span className="font-medium">{row.item_name}</span> &middot; requested {row.requested_quantity}{" "}
           {row.item_unit} &middot; current stock {row.current_stock} {row.item_unit}
         </div>
-        <button
-          type="button"
-          onClick={handleAdvance}
-          disabled={submitting}
-          className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {submitting ? "..." : REORDER_ACTION_LABELS[row.status] ?? "Advance"}
-        </button>
+        {!showReject && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowReject(true)}
+              disabled={submitting}
+              className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              onClick={handleAdvance}
+              disabled={submitting}
+              className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {submitting ? "..." : REORDER_ACTION_LABELS[row.status] ?? "Advance"}
+            </button>
+          </div>
+        )}
       </div>
       {row.notes && <p className="mt-1 text-xs text-gray-500">{row.notes}</p>}
+
+      {showReject && (
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Reason (optional)"
+            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-xs"
+          />
+          <button
+            type="button"
+            onClick={() => setShowReject(false)}
+            disabled={submitting}
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleReject}
+            disabled={submitting}
+            className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {submitting ? "..." : "Confirm reject"}
+          </button>
+        </div>
+      )}
+
       {actionError && <p className="mt-2 text-xs text-red-600">{actionError}</p>}
     </div>
   );

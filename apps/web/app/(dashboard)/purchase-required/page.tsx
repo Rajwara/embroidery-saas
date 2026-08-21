@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { advancePurchaseRequired, listPurchaseRequired } from "@embroidery/types";
+import { advancePurchaseRequired, listPurchaseRequired, rejectPurchaseRequired } from "@embroidery/types";
 import type { PurchaseRequiredOut } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
@@ -14,6 +14,7 @@ const STATUS_LABELS: Record<string, string> = {
   ordered: "Ordered",
   purchased: "Purchased",
   received: "Received",
+  rejected: "Rejected",
 };
 
 const PIPELINE = ["purchase_required", "pending_approval", "approved", "ordered", "purchased", "received"];
@@ -79,10 +80,14 @@ export default function PurchaseRequiredPage() {
 
 function PurchaseRequiredRow({ row, onAdvanced }: { row: PurchaseRequiredOut; onAdvanced: () => void }) {
   const [receivedQuantity, setReceivedQuantity] = useState(String(row.requested_quantity));
+  const [reason, setReason] = useState("");
+  const [showReject, setShowReject] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const isReceived = row.status === "received";
+  const isRejected = row.status === "rejected";
+  const isOpen = !isReceived && !isRejected;
   const isFinalStep = row.status === "purchased";
 
   const handleAdvance = async () => {
@@ -92,6 +97,18 @@ function PurchaseRequiredRow({ row, onAdvanced }: { row: PurchaseRequiredOut; on
       await advancePurchaseRequired(row.id, {
         received_quantity: isFinalStep ? Number(receivedQuantity) : undefined,
       });
+      onAdvanced();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.detail : "Something went wrong.");
+      setSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    setActionError(null);
+    setSubmitting(true);
+    try {
+      await rejectPurchaseRequired(row.id, { reason: reason || undefined });
       onAdvanced();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.detail : "Something went wrong.");
@@ -123,10 +140,14 @@ function PurchaseRequiredRow({ row, onAdvanced }: { row: PurchaseRequiredOut; on
         ))}
       </div>
 
+      {isRejected && row.rejection_reason && (
+        <p className="mt-1 text-xs text-gray-500">Reason: {row.rejection_reason}</p>
+      )}
+
       {actionError && <p className="mt-2 text-xs text-red-600">{actionError}</p>}
 
-      {!isReceived && (
-        <div className="mt-3 flex items-center gap-2">
+      {isOpen && !showReject && (
+        <div className="mt-3 flex items-center justify-end gap-2">
           {isFinalStep && (
             <input
               type="number"
@@ -137,11 +158,47 @@ function PurchaseRequiredRow({ row, onAdvanced }: { row: PurchaseRequiredOut; on
             />
           )}
           <button
+            type="button"
+            onClick={() => setShowReject(true)}
+            disabled={submitting}
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Reject
+          </button>
+          <button
             onClick={handleAdvance}
             disabled={submitting}
             className="rounded bg-gray-900 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             {submitting ? "..." : isFinalStep ? "Mark received" : "Advance"}
+          </button>
+        </div>
+      )}
+
+      {isOpen && showReject && (
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Reason (optional)"
+            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-xs"
+          />
+          <button
+            type="button"
+            onClick={() => setShowReject(false)}
+            disabled={submitting}
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleReject}
+            disabled={submitting}
+            className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {submitting ? "..." : "Confirm reject"}
           </button>
         </div>
       )}

@@ -96,7 +96,7 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
       setAdvanceId("");
       return;
     }
-    listAdvances({ employee_id: employeeId, open_only: true })
+    listAdvances({ employee_id: employeeId, status: "approved", open_only: true })
       .then((advances) => {
         setOpenAdvances(advances);
         setAdvanceId(advances[0]?.id ?? "");
@@ -154,7 +154,11 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
       setConfirmingApprove(false);
       toast.success("Payroll run approved");
     } catch (err) {
-      setApproveError(err instanceof ApiError ? err.detail : "Could not approve payroll run.");
+      if (err instanceof ApiError && err.detail === "cannot_approve_empty_payroll_run") {
+        setApproveError("This run has no employee entries -- there's nothing to approve.");
+      } else {
+        setApproveError(err instanceof ApiError ? err.detail : "Could not approve payroll run.");
+      }
     } finally {
       setApproving(false);
     }
@@ -214,7 +218,11 @@ export default function PayrollRunDetailPage(props: { params: Promise<{ id: stri
         <div className="flex items-center gap-3">
           <StatusBadge status={run.status} />
           {isDraft && hasPermission("payroll.approve") && (
-            <Button onClick={() => setConfirmingApprove(true)} disabled={approving}>
+            <Button
+              onClick={() => setConfirmingApprove(true)}
+              disabled={approving || run.entries.length === 0}
+              title={run.entries.length === 0 ? "This run has no employee entries to approve." : undefined}
+            >
               {approving && <Loader2 className="animate-spin" />}
               {approving ? "Approving..." : "Approve payroll run"}
             </Button>

@@ -81,6 +81,7 @@ class PurchaseRequiredOut(BaseModel):
     status: str
     requested_quantity: int
     notes: str | None
+    rejection_reason: str | None
     # Denormalized read-only convenience fields -- joined in by the router,
     # not stored columns (same reasoning as ProductionJobOut's enrichment).
     item_name: str
@@ -95,3 +96,9 @@ class AdvancePurchaseRequiredRequest(BaseModel):
     # staff record a different quantity than requested_quantity if that's
     # what actually arrived. Ignored on every earlier transition.
     received_quantity: int | None = None
+
+
+class RejectPurchaseRequiredRequest(BaseModel):
+    # Same optional-reason convention as production_entry.py's
+    # RejectEntryRequest.
+    reason: str | None = None

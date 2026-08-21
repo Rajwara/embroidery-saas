@@ -27,6 +27,7 @@ from app.schemas.payroll import (
     AdvanceInstallmentCreateRequest,
     AdvanceInstallmentOut,
     AdvanceOut,
+    AdvanceUpdateRequest,
     BonusCreateRequest,
     BonusOut,
     DeductionCreateRequest,
@@ -39,6 +40,7 @@ from app.schemas.payroll import (
     PayrollRunCreateRequest,
     PayrollRunDetailOut,
     PayrollRunOut,
+    RejectAdvanceRequest,
 )
 
 router = APIRouter()
@@ -233,6 +235,8 @@ def _to_advance_out(advance: Advance, employee: Employee, remaining_balance: flo
         advance_date=advance.advance_date,
         amount=float(advance.amount),
         reason=advance.reason,
+        status=advance.status,
+        rejection_reason=advance.rejection_reason,
         employee_name=employee.full_name,
         remaining_balance=remaining_balance,
     )
@@ -241,6 +245,7 @@ def _to_advance_out(advance: Advance, employee: Employee, remaining_balance: flo
 @router.get("/advances", response_model=list[AdvanceOut], operation_id="listAdvances")
 def list_advances(
     employee_id: uuid.UUID | None = None,
+    status_filter: str | None = Query(None, alias="status"),
     open_only: bool = False,
     db: Session = Depends(get_db),
     _user: User = Depends(require_permission("payroll.view")),
@@ -248,6 +253,8 @@ def list_advances(
     query = db.query(Advance)
     if employee_id:
         query = query.filter(Advance.employee_id == employee_id)
+    if status_filter:
+        query = query.filter(Advance.status == status_filter)
     advances = query.order_by(Advance.advance_date.desc()).all()
 
     results = []
@@ -281,6 +288,7 @@ def create_advance(
         advance_date=payload.advance_date,
         amount=payload.amount,
         reason=payload.reason,
+        status="pending",
     )
     db.add(advance)
     db.flush()  # populate advance.id -- Python-side default, not set until flush
@@ -328,6 +336,117 @@ def get_advance(
         **_to_advance_out(advance, employee, remaining).model_dump(),
         installments=[AdvanceInstallmentOut.model_validate(i) for i in installments],
     )
+
+
+@router.patch("/advances/{advance_id}", response_model=AdvanceOut, operation_id="updateAdvance")
+def update_advance(
+    advance_id: uuid.UUID,
+    payload: AdvanceUpdateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("payroll.create")),
+) -> AdvanceOut:
+    advance = db.get(Advance, advance_id)
+    if advance is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="advance_not_found")
+    if advance.status != "pending":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="advance_not_pending")
+
+    updates = payload.model_dump(exclude_none=True)
+    if "amount" in updates and updates["amount"] <= 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="amount_must_be_positive")
+
+    old_values: dict = {}
+    new_values: dict = {}
+    for field, value in updates.items():
+        current = getattr(advance, field)
+        if current != value:
+            old_values[field] = current
+            new_values[field] = value
+        setattr(advance, field, value)
+
+    if new_values:
+        ip_address, user_agent = client_meta(request)
+        record_audit(
+            db,
+            tenant_id=user.tenant_id,
+            actor_user_id=user.id,
+            action="update",
+            entity_type="advance",
+            entity_id=advance.id,
+            old_values=old_values,
+            new_values=new_values,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(advance)
+    employee = db.get(Employee, advance.employee_id)
+    # Still pending -- no installments can exist yet (recovery is gated on
+    # "approved"), so remaining balance is simply the (possibly just
+    # edited) full amount.
+    return _to_advance_out(advance, employee, float(advance.amount))
+
+
+@router.post("/advances/{advance_id}/approve", response_model=AdvanceOut, operation_id="approveAdvance")
+def approve_advance(
+    advance_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("payroll.approve")),
+) -> AdvanceOut:
+    advance = db.get(Advance, advance_id)
+    if advance is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="advance_not_found")
+    if advance.status != "pending":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="advance_not_pending")
+
+    advance.status = "approved"
+
+    ip_address, user_agent = client_meta(request)
+    record_audit(
+        db, tenant_id=user.tenant_id, actor_user_id=user.id, action="approve", entity_type="advance",
+        entity_id=advance.id, new_values={"status": "approved"}, ip_address=ip_address, user_agent=user_agent,
+    )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(advance)
+    employee = db.get(Employee, advance.employee_id)
+    return _to_advance_out(advance, employee, float(advance.amount))
+
+
+@router.post("/advances/{advance_id}/reject", response_model=AdvanceOut, operation_id="rejectAdvance")
+def reject_advance(
+    advance_id: uuid.UUID,
+    payload: RejectAdvanceRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("payroll.approve")),
+) -> AdvanceOut:
+    advance = db.get(Advance, advance_id)
+    if advance is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="advance_not_found")
+    if advance.status != "pending":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="advance_not_pending")
+
+    advance.status = "rejected"
+    advance.rejection_reason = payload.reason
+
+    ip_address, user_agent = client_meta(request)
+    record_audit(
+        db, tenant_id=user.tenant_id, actor_user_id=user.id, action="reject", entity_type="advance",
+        entity_id=advance.id, new_values={"status": "rejected", "rejection_reason": payload.reason},
+        ip_address=ip_address, user_agent=user_agent,
+    )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(advance)
+    employee = db.get(Employee, advance.employee_id)
+    return _to_advance_out(advance, employee, float(advance.amount))
 
 
 # ---------------------------------------------------------------------------
@@ -505,6 +624,15 @@ def create_payroll_run(
         )
         created_count += 1
 
+    if created_count == 0:
+        # Nothing to pay -- either the branch has no active employees, or
+        # none of them have a salary profile yet. Raising here (before
+        # commit) discards the run + any flushed rows: db.close() in
+        # get_db's teardown rolls back the still-open transaction, same
+        # pattern relied on elsewhere (e.g. invoices.py's create_invoice
+        # mid-loop failures).
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="no_eligible_employees_for_payroll")
+
     ip_address, user_agent = client_meta(request)
     record_audit(
         db,
@@ -641,6 +769,8 @@ def add_advance_installment(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="advance_not_found")
     if advance.employee_id != payload.employee_id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="advance_employee_mismatch")
+    if advance.status != "approved":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="advance_not_approved")
     if payload.amount <= 0:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="amount_must_be_positive")
 
@@ -680,6 +810,9 @@ def approve_payroll_run(
     user: User = Depends(require_permission("payroll.approve")),
 ) -> PayrollRunDetailOut:
     run = _require_draft_run(db, run_id)
+    entry_count = db.query(PayrollEntry).filter(PayrollEntry.payroll_run_id == run.id).count()
+    if entry_count == 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="cannot_approve_empty_payroll_run")
     run.status = "approved"
 
     ip_address, user_agent = client_meta(request)

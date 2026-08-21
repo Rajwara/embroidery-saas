@@ -51,6 +51,10 @@ export default function NewPayrollRunPage() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setSubmitError("A payroll run already exists for this branch and period.");
+      } else if (err instanceof ApiError && err.detail === "no_eligible_employees_for_payroll") {
+        setSubmitError(
+          "This branch has no active employees with a salary profile set up -- nothing to pay, so no run was created."
+        );
       } else {
         setSubmitError(err instanceof ApiError ? err.detail : "Something went wrong.");
       }

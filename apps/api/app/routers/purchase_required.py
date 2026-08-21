@@ -9,9 +9,13 @@ from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_internal_secret, require_permission
 from app.models import InventoryItem, PurchaseRequired, StockTransaction, Tenant, User
-from app.models.purchase_required import PURCHASE_REQUIRED_STATUSES
+from app.models.purchase_required import PURCHASE_REQUIRED_CLOSED_STATUSES, PURCHASE_REQUIRED_STATUSES
 from app.routers.inventory import maybe_open_purchase_required
-from app.schemas.inventory import AdvancePurchaseRequiredRequest, PurchaseRequiredOut
+from app.schemas.inventory import (
+    AdvancePurchaseRequiredRequest,
+    PurchaseRequiredOut,
+    RejectPurchaseRequiredRequest,
+)
 
 router = APIRouter()
 
@@ -32,6 +36,7 @@ def _to_out(request_row: PurchaseRequired, item: InventoryItem, current_stock: i
         status=request_row.status,
         requested_quantity=request_row.requested_quantity,
         notes=request_row.notes,
+        rejection_reason=request_row.rejection_reason,
         item_name=item.name,
         item_unit=item.unit,
         current_stock=current_stock,
@@ -51,7 +56,7 @@ def list_purchase_required(
     if status_filter:
         query = query.filter(PurchaseRequired.status == status_filter)
     if open_only:
-        query = query.filter(PurchaseRequired.status != "received")
+        query = query.filter(PurchaseRequired.status.not_in(PURCHASE_REQUIRED_CLOSED_STATUSES))
     rows = query.order_by(PurchaseRequired.created_at.desc()).offset(skip).limit(limit).all()
 
     results = []
@@ -123,6 +128,49 @@ def advance_purchase_required(
     return _to_out(row, item, _current_stock(db, item.id))
 
 
+@router.post(
+    "/{request_id}/reject", response_model=PurchaseRequiredOut, operation_id="rejectPurchaseRequired"
+)
+def reject_purchase_required(
+    request_id: uuid.UUID,
+    payload: RejectPurchaseRequiredRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permission("inventory.edit")),
+) -> PurchaseRequiredOut:
+    row = db.get(PurchaseRequired, request_id)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="purchase_required_not_found")
+    if row.status == "received":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="already_received")
+    if row.status == "rejected":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="already_rejected")
+
+    old_status = row.status
+    row.status = "rejected"
+    row.rejection_reason = payload.reason
+
+    ip_address, user_agent = client_meta(request)
+    record_audit(
+        db,
+        tenant_id=user.tenant_id,
+        actor_user_id=user.id,
+        action="reject",
+        entity_type="purchase_required",
+        entity_id=row.id,
+        old_values={"status": old_status},
+        new_values={"status": "rejected", "rejection_reason": payload.reason},
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    db.commit()
+    set_tenant_context(db, str(user.tenant_id))
+    db.refresh(row)
+    item = db.get(InventoryItem, row.inventory_item_id)
+    return _to_out(row, item, _current_stock(db, item.id))
+
+
 # ---------------------------------------------------------------------------
 # Internal (worker-only, shared-secret authenticated)
 # ---------------------------------------------------------------------------
@@ -147,7 +195,8 @@ def internal_check_reorder_thresholds(
     internal_list_due_scheduled_reports, for the same reason: there's no
     single authenticated tenant to derive RLS context from on a
     machine-to-machine call. Idempotent -- maybe_open_purchase_required
-    itself skips items that already have an open (non-"received") request.
+    itself skips items that already have an open (non-"received",
+    non-"rejected") request.
     """
     opened = 0
     for tenant in db.query(Tenant).all():
@@ -156,14 +205,20 @@ def internal_check_reorder_thresholds(
         for item in items:
             before = (
                 db.query(PurchaseRequired)
-                .filter(PurchaseRequired.inventory_item_id == item.id, PurchaseRequired.status != "received")
+                .filter(
+                    PurchaseRequired.inventory_item_id == item.id,
+                    PurchaseRequired.status.not_in(PURCHASE_REQUIRED_CLOSED_STATUSES),
+                )
                 .count()
             )
             maybe_open_purchase_required(db, tenant.id, item)
             db.flush()
             after = (
                 db.query(PurchaseRequired)
-                .filter(PurchaseRequired.inventory_item_id == item.id, PurchaseRequired.status != "received")
+                .filter(
+                    PurchaseRequired.inventory_item_id == item.id,
+                    PurchaseRequired.status.not_in(PURCHASE_REQUIRED_CLOSED_STATUSES),
+                )
                 .count()
             )
             if after > before:

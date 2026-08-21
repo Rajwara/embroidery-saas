@@ -21,12 +21,16 @@ export interface AdvanceCreateRequest {
 
 export type AdvanceDetailOutReason = string | null;
 
+export type AdvanceDetailOutRejectionReason = string | null;
+
 export interface AdvanceDetailOut {
   id: string;
   employee_id: string;
   advance_date: string;
   amount: number;
   reason: AdvanceDetailOutReason;
+  status: string;
+  rejection_reason: AdvanceDetailOutRejectionReason;
   employee_name: string;
   remaining_balance: number;
   installments: AdvanceInstallmentOut[];
@@ -49,12 +53,16 @@ export interface AdvanceInstallmentOut {
 
 export type AdvanceOutReason = string | null;
 
+export type AdvanceOutRejectionReason = string | null;
+
 export interface AdvanceOut {
   id: string;
   employee_id: string;
   advance_date: string;
   amount: number;
   reason: AdvanceOutReason;
+  status: string;
+  rejection_reason: AdvanceOutRejectionReason;
   employee_name: string;
   remaining_balance: number;
 }
@@ -63,6 +71,18 @@ export type AdvancePurchaseRequiredRequestReceivedQuantity = number | null;
 
 export interface AdvancePurchaseRequiredRequest {
   received_quantity?: AdvancePurchaseRequiredRequestReceivedQuantity;
+}
+
+export type AdvanceUpdateRequestAdvanceDate = string | null;
+
+export type AdvanceUpdateRequestAmount = number | null;
+
+export type AdvanceUpdateRequestReason = string | null;
+
+export interface AdvanceUpdateRequest {
+  advance_date?: AdvanceUpdateRequestAdvanceDate;
+  amount?: AdvanceUpdateRequestAmount;
+  reason?: AdvanceUpdateRequestReason;
 }
 
 export interface AgeingBuckets {
@@ -1841,12 +1861,15 @@ export interface PurchaseOut {
 
 export type PurchaseRequiredOutNotes = string | null;
 
+export type PurchaseRequiredOutRejectionReason = string | null;
+
 export interface PurchaseRequiredOut {
   id: string;
   inventory_item_id: string;
   status: string;
   requested_quantity: number;
   notes: PurchaseRequiredOutNotes;
+  rejection_reason: PurchaseRequiredOutRejectionReason;
   item_name: string;
   item_unit: string;
   current_stock: number;
@@ -1891,10 +1914,22 @@ export interface RefreshRequest {
   refresh_token: string;
 }
 
+export type RejectAdvanceRequestReason = string | null;
+
+export interface RejectAdvanceRequest {
+  reason?: RejectAdvanceRequestReason;
+}
+
 export type RejectEntryRequestReason = string | null;
 
 export interface RejectEntryRequest {
   reason?: RejectEntryRequestReason;
+}
+
+export type RejectPurchaseRequiredRequestReason = string | null;
+
+export interface RejectPurchaseRequiredRequest {
+  reason?: RejectPurchaseRequiredRequestReason;
 }
 
 export interface ResetPasswordRequest {
@@ -2556,6 +2591,7 @@ employee_id?: string | null;
 
 export type ListAdvancesParams = {
 employee_id?: string | null;
+status?: string | null;
 open_only?: boolean;
 };
 
@@ -5344,6 +5380,82 @@ export const getAdvance = async (advanceId: string, options?: RequestInit): Prom
 
 
 /**
+ * @summary Update Advance
+ */
+export const getUpdateAdvanceUrl = (advanceId: string,) => {
+
+
+  
+
+  return `/advances/${advanceId}`
+}
+
+export const updateAdvance = async (advanceId: string,
+    advanceUpdateRequest: AdvanceUpdateRequest, options?: RequestInit): Promise<AdvanceOut> => {
+  
+  return apiMutator<AdvanceOut>(getUpdateAdvanceUrl(advanceId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      advanceUpdateRequest,)
+  }
+);}
+
+
+
+/**
+ * @summary Approve Advance
+ */
+export const getApproveAdvanceUrl = (advanceId: string,) => {
+
+
+  
+
+  return `/advances/${advanceId}/approve`
+}
+
+export const approveAdvance = async (advanceId: string, options?: RequestInit): Promise<AdvanceOut> => {
+  
+  return apiMutator<AdvanceOut>(getApproveAdvanceUrl(advanceId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+/**
+ * @summary Reject Advance
+ */
+export const getRejectAdvanceUrl = (advanceId: string,) => {
+
+
+  
+
+  return `/advances/${advanceId}/reject`
+}
+
+export const rejectAdvance = async (advanceId: string,
+    rejectAdvanceRequest: RejectAdvanceRequest, options?: RequestInit): Promise<AdvanceOut> => {
+  
+  return apiMutator<AdvanceOut>(getRejectAdvanceUrl(advanceId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      rejectAdvanceRequest,)
+  }
+);}
+
+
+
+/**
  * One employee's PayrollEntry across every PayrollRun -- the
 across-all-runs counterpart to PayrollRunDetailOut.entries, which is
 scoped to a single run instead (see EmployeePayrollHistoryOut).
@@ -6055,6 +6167,32 @@ export const advancePurchaseRequired = async (requestId: string,
 
 
 /**
+ * @summary Reject Purchase Required
+ */
+export const getRejectPurchaseRequiredUrl = (requestId: string,) => {
+
+
+  
+
+  return `/purchase-required/${requestId}/reject`
+}
+
+export const rejectPurchaseRequired = async (requestId: string,
+    rejectPurchaseRequiredRequest: RejectPurchaseRequiredRequest, options?: RequestInit): Promise<PurchaseRequiredOut> => {
+  
+  return apiMutator<PurchaseRequiredOut>(getRejectPurchaseRequiredUrl(requestId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      rejectPurchaseRequiredRequest,)
+  }
+);}
+
+
+
+/**
  * Periodic sweep (apps/worker's Celery beat, hourly -- see
 apps/worker/tasks.py's check_reorder_thresholds). maybe_open_purchase_
 required (app/routers/inventory.py) only runs reactively, inside
@@ -6069,7 +6207,8 @@ tenant-loop-plus-SET-LOCAL pattern as
 internal_list_due_scheduled_reports, for the same reason: there's no
 single authenticated tenant to derive RLS context from on a
 machine-to-machine call. Idempotent -- maybe_open_purchase_required
-itself skips items that already have an open (non-"received") request.
+itself skips items that already have an open (non-"received",
+non-"rejected") request.
  * @summary Internal Check Reorder Thresholds
  */
 export const getInternalCheckReorderThresholdsUrl = () => {
