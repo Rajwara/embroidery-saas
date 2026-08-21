@@ -52,7 +52,7 @@ export default function NewSupplierPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded bg-white p-6 shadow">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Name</label>
+          <label className="block text-sm font-medium text-gray-700">Business Name</label>
           <input
             type="text"
             value={name}
@@ -64,7 +64,7 @@ export default function NewSupplierPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Contact person</label>
+            <label className="block text-sm font-medium text-gray-700">Contact Person</label>
             <input
               type="text"
               value={contactPerson}

@@ -69,7 +69,7 @@ function ClientForm({ add, submitting, submitError }: ClientFormProps) {
     <form onSubmit={handleSubmit} className="space-y-3 rounded bg-white p-4 shadow">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Name</label>
+          <label className="block text-sm font-medium text-gray-700">Business Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -78,7 +78,7 @@ function ClientForm({ add, submitting, submitError }: ClientFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Contact person</label>
+          <label className="block text-sm font-medium text-gray-700">Contact Person</label>
           <input
             value={contactPerson}
             onChange={(e) => setContactPerson(e.target.value)}

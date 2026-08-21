@@ -82,8 +82,8 @@ export default function PartiesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Contact</TableHead>
+                <TableHead>Business Name</TableHead>
+                <TableHead>Contact Person</TableHead>
                 <TableHead>Phone</TableHead>
                 {canSeeMoney && <TableHead className="text-right">Balance</TableHead>}
                 <TableHead>Status</TableHead>
@@ -127,8 +127,8 @@ function PartiesTableSkeleton({ canSeeMoney }: { canSeeMoney: boolean }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Contact</TableHead>
+            <TableHead>Business Name</TableHead>
+            <TableHead>Contact Person</TableHead>
             <TableHead>Phone</TableHead>
             {canSeeMoney && <TableHead className="text-right">Balance</TableHead>}
             <TableHead>Status</TableHead>
