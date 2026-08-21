@@ -3,16 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 
 import Link from "next/link";
-import { AlertCircle, Users } from "lucide-react";
+import { AlertCircle, Banknote, Clock, Landmark, Package, Timer, Users, Wallet, X } from "lucide-react";
 
-import { listParties } from "@embroidery/types";
-import type { Party } from "@embroidery/types";
+import { listLots, listParties } from "@embroidery/types";
+import type { LotOut, Party } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -23,18 +24,30 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+type RowFilter = "pending" | "cheque" | null;
+
 export default function PartiesPage() {
   const { hasPermission } = useAuth();
   const [parties, setParties] = useState<Party[] | null>(null);
+  const [lots, setLots] = useState<LotOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rowFilter, setRowFilter] = useState<RowFilter>(null);
 
   const canSeeMoney = hasPermission("parties.see_money");
+  const canViewLots = hasPermission("lots.view");
 
   const load = useCallback(() => {
     setError(null);
     setParties(null);
-    listParties()
-      .then(setParties)
+    setLots(null);
+    Promise.all([
+      listParties(),
+      canViewLots ? listLots({ limit: 200 }) : Promise.resolve(null),
+    ])
+      .then(([partiesData, lotsData]) => {
+        setParties(partiesData);
+        setLots(lotsData);
+      })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 403) {
           setError("You don't have permission to view parties.");
@@ -42,14 +55,39 @@ export default function PartiesPage() {
           setError("Could not load parties.");
         }
       });
-  }, []);
+  }, [canViewLots]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  const toggleFilter = (next: RowFilter) => {
+    setRowFilter((current) => (current === next ? null : next));
+  };
+
+  const totalInvoicedAmount = (parties ?? []).reduce((sum, p) => sum + (p.total_invoiced_amount ?? 0), 0);
+  const totalReceivedAmount = (parties ?? []).reduce((sum, p) => sum + (p.total_received_amount ?? 0), 0);
+  const totalPendingAmount = (parties ?? []).reduce(
+    (sum, p) => sum + (p.pending_invoices_amount ?? 0) + (p.overdue_invoices_amount ?? 0),
+    0
+  );
+  const promisedChequeAmount = (parties ?? []).reduce((sum, p) => sum + (p.promised_cheque_amount ?? 0), 0);
+  const activeLotsCount = (lots ?? []).filter((l) => l.status === "confirmed").length;
+  const pendingLotsCount = (lots ?? []).filter(
+    (l) => l.status === "pending_breakdown" || l.status === "pending_confirmation"
+  ).length;
+
+  const isPending = (p: Party) => (p.pending_invoices_amount ?? 0) + (p.overdue_invoices_amount ?? 0) > 0.005;
+  const isChequePromised = (p: Party) => (p.promised_cheque_amount ?? 0) > 0.005;
+
+  const visibleParties = (parties ?? []).filter((p) => {
+    if (rowFilter === "pending") return isPending(p);
+    if (rowFilter === "cheque") return isChequePromised(p);
+    return true;
+  });
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Parties</h1>
         {hasPermission("parties.create") && <Button render={<Link href="/parties/new" />}>Add Party</Button>}
@@ -67,6 +105,77 @@ export default function PartiesPage() {
         </Alert>
       )}
 
+      {!error && (canSeeMoney || canViewLots) && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {canSeeMoney && (
+            <SummaryTile
+              label="Total Amount"
+              value={parties === null ? undefined : totalInvoicedAmount}
+              icon={<Wallet />}
+              href="/invoices"
+            />
+          )}
+          {canSeeMoney && (
+            <SummaryTile
+              label="Received Amount"
+              value={parties === null ? undefined : totalReceivedAmount}
+              icon={<Banknote className="text-brand-green" />}
+              valueClassName="text-brand-green-text"
+              href="/payments"
+            />
+          )}
+          {canSeeMoney && (
+            <SummaryTile
+              label="Pending Amount"
+              value={parties === null ? undefined : totalPendingAmount}
+              icon={<Clock className="text-brand-yellow" />}
+              valueClassName={totalPendingAmount > 0 ? "text-brand-yellow-text" : undefined}
+              active={rowFilter === "pending"}
+              onClick={() => toggleFilter("pending")}
+            />
+          )}
+          {canSeeMoney && (
+            <SummaryTile
+              label="Promised Cheque Payments"
+              value={parties === null ? undefined : promisedChequeAmount}
+              icon={<Landmark className="text-brand-blue" />}
+              active={rowFilter === "cheque"}
+              onClick={() => toggleFilter("cheque")}
+            />
+          )}
+          {canViewLots && (
+            <SummaryTile
+              label="Active Lots"
+              value={lots === null ? undefined : activeLotsCount}
+              icon={<Package />}
+              isMoney={false}
+              href="/lots"
+            />
+          )}
+          {canViewLots && (
+            <SummaryTile
+              label="Pending Lots"
+              value={lots === null ? undefined : pendingLotsCount}
+              icon={<Timer />}
+              isMoney={false}
+              href="/lots"
+            />
+          )}
+        </div>
+      )}
+
+      {rowFilter && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            Showing parties with {rowFilter === "pending" ? "a pending or overdue balance" : "a promised cheque payment"}.
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setRowFilter(null)}>
+            <X />
+            Clear filter
+          </Button>
+        </div>
+      )}
+
       {!error && parties === null && <PartiesTableSkeleton canSeeMoney={canSeeMoney} />}
 
       {!error && parties !== null && parties.length === 0 && (
@@ -77,7 +186,17 @@ export default function PartiesPage() {
         </div>
       )}
 
-      {!error && parties !== null && parties.length > 0 && (
+      {!error && parties !== null && parties.length > 0 && visibleParties.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <Users className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No parties match this filter</p>
+          <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setRowFilter(null)}>
+            Clear filter
+          </Button>
+        </div>
+      )}
+
+      {!error && parties !== null && visibleParties.length > 0 && (
         <div className="rounded-xl border">
           <Table>
             <TableHeader>
@@ -93,7 +212,7 @@ export default function PartiesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {parties.map((party) => (
+              {visibleParties.map((party) => (
                 <TableRow key={party.id}>
                   <TableCell>
                     <Link href={`/parties/${party.id}`} className="font-medium text-foreground hover:underline">
@@ -145,6 +264,57 @@ export default function PartiesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function SummaryTile({
+  label,
+  value,
+  icon,
+  href,
+  onClick,
+  active,
+  isMoney = true,
+  valueClassName,
+}: {
+  label: string;
+  value: number | undefined;
+  icon: React.ReactNode;
+  href?: string;
+  onClick?: () => void;
+  active?: boolean;
+  isMoney?: boolean;
+  valueClassName?: string;
+}) {
+  const content = (
+    <Card className={active ? "ring-2 ring-inset ring-primary" : undefined}>
+      <CardContent className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">{label}</p>
+          {value === undefined ? (
+            <Skeleton className="mt-1 h-7 w-20" />
+          ) : (
+            <p className={`text-xl font-semibold tabular-nums ${valueClassName ?? ""}`}>
+              {isMoney ? value.toFixed(2) : value}
+            </p>
+          )}
+        </div>
+        <div className="text-muted-foreground [&>svg]:size-5">{icon}</div>
+      </CardContent>
+    </Card>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className="block transition-opacity hover:opacity-80">
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className="block w-full text-left transition-opacity hover:opacity-80">
+      {content}
+    </button>
   );
 }
 

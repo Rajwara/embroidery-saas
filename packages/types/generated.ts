@@ -1471,6 +1471,12 @@ export type PartyDocsOutOverdueInvoicesCount = number | null;
 
 export type PartyDocsOutOverdueInvoicesAmount = number | null;
 
+export type PartyDocsOutTotalInvoicedAmount = number | null;
+
+export type PartyDocsOutTotalReceivedAmount = number | null;
+
+export type PartyDocsOutPromisedChequeAmount = number | null;
+
 /**
  * OpenAPI-documentation-only schema for GET/POST/PATCH /parties responses.
 
@@ -1508,6 +1514,9 @@ export interface PartyDocsOut {
   pending_invoices_amount?: PartyDocsOutPendingInvoicesAmount;
   overdue_invoices_count?: PartyDocsOutOverdueInvoicesCount;
   overdue_invoices_amount?: PartyDocsOutOverdueInvoicesAmount;
+  total_invoiced_amount?: PartyDocsOutTotalInvoicedAmount;
+  total_received_amount?: PartyDocsOutTotalReceivedAmount;
+  promised_cheque_amount?: PartyDocsOutPromisedChequeAmount;
 }
 
 export type PartyUpdateRequestName = string | null;

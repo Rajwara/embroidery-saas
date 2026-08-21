@@ -60,6 +60,17 @@ _ZERO_INVOICE_SUMMARY = {
     "pending_invoices_amount": 0.0,
     "overdue_invoices_count": 0,
     "overdue_invoices_amount": 0.0,
+    # Unconditional running totals across every invoice (paid or not) --
+    # used by the Parties list page's summary header, see
+    # PartiesSummaryOut's docstring for why these can't just be derived
+    # from the buckets above (pending/overdue amounts are balance, not
+    # total, so they don't sum back to total_invoiced_amount).
+    "total_invoiced_amount": 0.0,
+    "total_received_amount": 0.0,
+    # Sum of outstanding balance for invoices where the party's latest
+    # promise was to pay by cheque -- only counts while still owed
+    # (balance > 0), a stale promise on an already-paid invoice doesn't count.
+    "promised_cheque_amount": 0.0,
 }
 
 
@@ -109,11 +120,12 @@ def _invoice_status_summaries(db: Session, party_ids: list[uuid.UUID]) -> dict[u
             Invoice.id,
             Invoice.party_id,
             Invoice.due_date,
+            Invoice.promised_payment_method,
             func.coalesce(func.sum(InvoiceLineItem.line_total), 0).label("total"),
         )
         .join(InvoiceLineItem, InvoiceLineItem.invoice_id == Invoice.id)
         .filter(Invoice.party_id.in_(party_ids))
-        .group_by(Invoice.id, Invoice.party_id, Invoice.due_date)
+        .group_by(Invoice.id, Invoice.party_id, Invoice.due_date, Invoice.promised_payment_method)
         .all()
     )
     if not invoice_rows:
@@ -134,6 +146,8 @@ def _invoice_status_summaries(db: Session, party_ids: list[uuid.UUID]) -> dict[u
         total = float(row.total)
         paid = float(paid_totals.get(row.id, 0))
         balance = round(total - paid, 2)
+        summary["total_invoiced_amount"] += total
+        summary["total_received_amount"] += paid
         if balance <= 0.005:
             summary["paid_invoices_count"] += 1
             summary["paid_invoices_amount"] += total
@@ -143,6 +157,8 @@ def _invoice_status_summaries(db: Session, party_ids: list[uuid.UUID]) -> dict[u
         else:
             summary["pending_invoices_count"] += 1
             summary["pending_invoices_amount"] += balance
+        if balance > 0.005 and row.promised_payment_method == "cheque":
+            summary["promised_cheque_amount"] += balance
     return summaries
 
 

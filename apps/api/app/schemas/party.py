@@ -73,6 +73,15 @@ class PartyWithBalanceOut(PartyOut):
     pending_invoices_amount: float = 0.0
     overdue_invoices_count: int = 0
     overdue_invoices_amount: float = 0.0
+    # Unconditional running totals across every invoice (not just the paid
+    # bucket) -- see _invoice_status_summaries's docstring in
+    # routers/parties.py for why these can't be derived from the fields
+    # above. Powers the Parties list page's summary header.
+    total_invoiced_amount: float = 0.0
+    total_received_amount: float = 0.0
+    # Outstanding balance across invoices whose latest promise was to pay
+    # by cheque (Invoice.promised_payment_method == "cheque").
+    promised_cheque_amount: float = 0.0
 
 
 class PartyDocsOut(PartyOut):
@@ -102,3 +111,6 @@ class PartyDocsOut(PartyOut):
     pending_invoices_amount: float | None = None
     overdue_invoices_count: int | None = None
     overdue_invoices_amount: float | None = None
+    total_invoiced_amount: float | None = None
+    total_received_amount: float | None = None
+    promised_cheque_amount: float | None = None
