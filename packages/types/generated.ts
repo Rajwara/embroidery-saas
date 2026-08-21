@@ -1459,6 +1459,18 @@ export type PartyDocsOutOpeningBalance = string | null;
 
 export type PartyDocsOutCurrentBalance = string | null;
 
+export type PartyDocsOutPaidInvoicesCount = number | null;
+
+export type PartyDocsOutPaidInvoicesAmount = number | null;
+
+export type PartyDocsOutPendingInvoicesCount = number | null;
+
+export type PartyDocsOutPendingInvoicesAmount = number | null;
+
+export type PartyDocsOutOverdueInvoicesCount = number | null;
+
+export type PartyDocsOutOverdueInvoicesAmount = number | null;
+
 /**
  * OpenAPI-documentation-only schema for GET/POST/PATCH /parties responses.
 
@@ -1490,6 +1502,12 @@ export interface PartyDocsOut {
   is_active: boolean;
   opening_balance?: PartyDocsOutOpeningBalance;
   current_balance?: PartyDocsOutCurrentBalance;
+  paid_invoices_count?: PartyDocsOutPaidInvoicesCount;
+  paid_invoices_amount?: PartyDocsOutPaidInvoicesAmount;
+  pending_invoices_count?: PartyDocsOutPendingInvoicesCount;
+  pending_invoices_amount?: PartyDocsOutPendingInvoicesAmount;
+  overdue_invoices_count?: PartyDocsOutOverdueInvoicesCount;
+  overdue_invoices_amount?: PartyDocsOutOverdueInvoicesAmount;
 }
 
 export type PartyUpdateRequestName = string | null;
@@ -1798,15 +1816,20 @@ export interface PurchaseBalanceOut {
   balance: number;
 }
 
+export type PurchaseCreateRequestDueDate = string | null;
+
 export type PurchaseCreateRequestNotes = string | null;
 
 export interface PurchaseCreateRequest {
   branch_id: string;
   supplier_id: string;
   purchase_date: string;
+  due_date?: PurchaseCreateRequestDueDate;
   notes?: PurchaseCreateRequestNotes;
   lines: PurchaseLineItemCreateRequest[];
 }
+
+export type PurchaseDetailOutDueDate = string | null;
 
 export type PurchaseDetailOutNotes = string | null;
 
@@ -1821,6 +1844,7 @@ export interface PurchaseDetailOut {
   supplier_id: string;
   purchase_number: string;
   purchase_date: string;
+  due_date: PurchaseDetailOutDueDate;
   notes: PurchaseDetailOutNotes;
   total_amount: number;
   lines: PurchaseLineItemOut[];
@@ -1847,6 +1871,8 @@ export interface PurchaseLineItemOut {
   inventory_item_id: PurchaseLineItemOutInventoryItemId;
 }
 
+export type PurchaseOutDueDate = string | null;
+
 export type PurchaseOutNotes = string | null;
 
 export interface PurchaseOut {
@@ -1855,6 +1881,7 @@ export interface PurchaseOut {
   supplier_id: string;
   purchase_number: string;
   purchase_date: string;
+  due_date: PurchaseOutDueDate;
   notes: PurchaseOutNotes;
   total_amount: number;
 }
@@ -2121,6 +2148,18 @@ export type SupplierDocsOutOpeningBalance = string | null;
 
 export type SupplierDocsOutCurrentBalance = string | null;
 
+export type SupplierDocsOutPaidPurchasesCount = number | null;
+
+export type SupplierDocsOutPaidPurchasesAmount = number | null;
+
+export type SupplierDocsOutPendingPurchasesCount = number | null;
+
+export type SupplierDocsOutPendingPurchasesAmount = number | null;
+
+export type SupplierDocsOutOverduePurchasesCount = number | null;
+
+export type SupplierDocsOutOverduePurchasesAmount = number | null;
+
 /**
  * OpenAPI-documentation-only schema for GET/POST/PATCH /suppliers
 responses -- same reasoning as PartyDocsOut in schemas/party.py. Not used
@@ -2139,6 +2178,12 @@ export interface SupplierDocsOut {
   is_active: boolean;
   opening_balance?: SupplierDocsOutOpeningBalance;
   current_balance?: SupplierDocsOutCurrentBalance;
+  paid_purchases_count?: SupplierDocsOutPaidPurchasesCount;
+  paid_purchases_amount?: SupplierDocsOutPaidPurchasesAmount;
+  pending_purchases_count?: SupplierDocsOutPendingPurchasesCount;
+  pending_purchases_amount?: SupplierDocsOutPendingPurchasesAmount;
+  overdue_purchases_count?: SupplierDocsOutOverduePurchasesCount;
+  overdue_purchases_amount?: SupplierDocsOutOverduePurchasesAmount;
 }
 
 export type SupplierLedgerEntryOutEntryType = typeof SupplierLedgerEntryOutEntryType[keyof typeof SupplierLedgerEntryOutEntryType];

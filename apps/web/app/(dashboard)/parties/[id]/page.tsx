@@ -621,8 +621,8 @@ export default function PartyDetailPage(props: { params: Promise<{ id: string }>
                     <TableHead>Date</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Reference</TableHead>
-                    <TableHead className="text-right">Debit</TableHead>
-                    <TableHead className="text-right">Credit</TableHead>
+                    <TableHead className="text-right">Billed Amount</TableHead>
+                    <TableHead className="text-right">Received Amount</TableHead>
                     <TableHead className="text-right">Balance</TableHead>
                   </TableRow>
                 </TableHeader>

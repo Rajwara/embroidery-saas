@@ -89,6 +89,7 @@ export default function PurchasesPage() {
                 <TableHead>Purchase #</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead>Due</TableHead>
                 <TableHead className="text-right">Total</TableHead>
               </TableRow>
             </TableHeader>
@@ -102,6 +103,7 @@ export default function PurchasesPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{supplierName(purchase.supplier_id)}</TableCell>
                   <TableCell className="text-muted-foreground">{purchase.purchase_date}</TableCell>
+                  <TableCell className="text-muted-foreground">{purchase.due_date ?? "—"}</TableCell>
                   <TableCell className="text-right tabular-nums">{purchase.total_amount.toFixed(2)}</TableCell>
                 </TableRow>
               ))}
@@ -122,6 +124,7 @@ function PurchasesTableSkeleton() {
             <TableHead>Purchase #</TableHead>
             <TableHead>Supplier</TableHead>
             <TableHead>Date</TableHead>
+            <TableHead>Due</TableHead>
             <TableHead className="text-right">Total</TableHead>
           </TableRow>
         </TableHeader>
@@ -133,6 +136,9 @@ function PurchasesTableSkeleton() {
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-28" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-20" />
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-20" />

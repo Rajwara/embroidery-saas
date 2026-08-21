@@ -56,12 +56,20 @@ class SupplierWithBalanceOut(SupplierOut):
     """Returned when the caller DOES have suppliers.see_money."""
 
     opening_balance: Decimal
-    # opening_balance + purchase totals, computed live the same way
-    # _build_ledger's running total is (see routers/suppliers.py) -- there's
-    # no credit-side movement yet (no supplier-payment tracking exists, see
-    # [[domain_supplier_payment_gap]]), so this is purely additive over
-    # opening_balance, unlike Party's current_balance.
+    # opening_balance + purchase totals - supplier payment amounts,
+    # computed live the same way _build_ledger's running total is (see
+    # routers/suppliers.py).
     current_balance: Decimal
+    # Bulk-computed by routers/suppliers.py's _purchase_status_summaries,
+    # mirroring Party's _invoice_status_summaries -- zero on every endpoint
+    # except list_suppliers. paid_purchases_amount sums each paid
+    # purchase's total; pending/overdue amounts sum outstanding balance.
+    paid_purchases_count: int = 0
+    paid_purchases_amount: float = 0.0
+    pending_purchases_count: int = 0
+    pending_purchases_amount: float = 0.0
+    overdue_purchases_count: int = 0
+    overdue_purchases_amount: float = 0.0
 
 
 class SupplierDocsOut(SupplierOut):
@@ -72,3 +80,9 @@ class SupplierDocsOut(SupplierOut):
 
     opening_balance: Decimal | None = None
     current_balance: Decimal | None = None
+    paid_purchases_count: int | None = None
+    paid_purchases_amount: float | None = None
+    pending_purchases_count: int | None = None
+    pending_purchases_amount: float | None = None
+    overdue_purchases_count: int | None = None
+    overdue_purchases_amount: float | None = None

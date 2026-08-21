@@ -80,6 +80,7 @@ export default function PurchaseDetailPage(props: { params: Promise<{ id: string
         <h1 className="text-2xl font-semibold">{purchase.purchase_number}</h1>
         <p className="text-sm text-muted-foreground">
           {supplierName ?? "—"} &middot; {purchase.purchase_date}
+          {purchase.due_date && <> &middot; due {purchase.due_date}</>}
         </p>
         {purchase.notes && <p className="mt-1 text-sm text-muted-foreground">{purchase.notes}</p>}
       </div>

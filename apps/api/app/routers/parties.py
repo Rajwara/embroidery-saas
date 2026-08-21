@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
-from app.models import Invoice, InvoiceLineItem, Party, Payment, User
+from app.models import Invoice, InvoiceLineItem, Party, Payment, PaymentAllocation, User
 from app.pdf import html_to_pdf
 from app.permissions import user_has_permission
 from app.schemas.party import (
@@ -53,13 +53,29 @@ STATEMENT_PDF_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 
-def _serialize(party: Party, can_see_money: bool, current_balance: float = 0.0) -> PartyOut | PartyWithBalanceOut:
+_ZERO_INVOICE_SUMMARY = {
+    "paid_invoices_count": 0,
+    "paid_invoices_amount": 0.0,
+    "pending_invoices_count": 0,
+    "pending_invoices_amount": 0.0,
+    "overdue_invoices_count": 0,
+    "overdue_invoices_amount": 0.0,
+}
+
+
+def _serialize(
+    party: Party,
+    can_see_money: bool,
+    current_balance: float = 0.0,
+    invoice_summary: dict | None = None,
+) -> PartyOut | PartyWithBalanceOut:
     if not can_see_money:
         return PartyOut.model_validate(party)
     return PartyWithBalanceOut(
         **PartyOut.model_validate(party).model_dump(),
         opening_balance=party.opening_balance,
         current_balance=current_balance,
+        **(invoice_summary or _ZERO_INVOICE_SUMMARY),
     )
 
 
@@ -76,6 +92,58 @@ def _current_balance(db: Session, party: Party) -> float:
         db.query(func.coalesce(func.sum(Payment.amount), 0)).filter(Payment.party_id == party.id).scalar()
     )
     return float(party.opening_balance) + float(invoice_total) - float(payment_total)
+
+
+def _invoice_status_summaries(db: Session, party_ids: list[uuid.UUID]) -> dict[uuid.UUID, dict]:
+    """Bulk paid/pending/overdue invoice counts+amounts, one entry per
+    party_id that has at least one invoice -- two grouped queries for the
+    whole page rather than per-party (N+1), same tradeoff as the balance
+    computation above. paid_invoices_amount sums each invoice's total
+    (fully covered, so total == what was paid); pending/overdue amounts
+    sum the invoice's remaining balance (what's actually still owed), not
+    its total -- "how much is outstanding" is the useful number there."""
+    if not party_ids:
+        return {}
+    invoice_rows = (
+        db.query(
+            Invoice.id,
+            Invoice.party_id,
+            Invoice.due_date,
+            func.coalesce(func.sum(InvoiceLineItem.line_total), 0).label("total"),
+        )
+        .join(InvoiceLineItem, InvoiceLineItem.invoice_id == Invoice.id)
+        .filter(Invoice.party_id.in_(party_ids))
+        .group_by(Invoice.id, Invoice.party_id, Invoice.due_date)
+        .all()
+    )
+    if not invoice_rows:
+        return {}
+
+    invoice_ids = [row.id for row in invoice_rows]
+    paid_totals = dict(
+        db.query(PaymentAllocation.invoice_id, func.coalesce(func.sum(PaymentAllocation.amount), 0))
+        .filter(PaymentAllocation.allocation_type == "invoice", PaymentAllocation.invoice_id.in_(invoice_ids))
+        .group_by(PaymentAllocation.invoice_id)
+        .all()
+    )
+
+    today = date_type.today()
+    summaries: dict[uuid.UUID, dict] = {}
+    for row in invoice_rows:
+        summary = summaries.setdefault(row.party_id, dict(_ZERO_INVOICE_SUMMARY))
+        total = float(row.total)
+        paid = float(paid_totals.get(row.id, 0))
+        balance = round(total - paid, 2)
+        if balance <= 0.005:
+            summary["paid_invoices_count"] += 1
+            summary["paid_invoices_amount"] += total
+        elif row.due_date is not None and row.due_date < today:
+            summary["overdue_invoices_count"] += 1
+            summary["overdue_invoices_amount"] += balance
+        else:
+            summary["pending_invoices_count"] += 1
+            summary["pending_invoices_amount"] += balance
+    return summaries
 
 
 # NOTE: response_model is deliberately NOT set on any route below -- see
@@ -125,7 +193,12 @@ def list_parties(
             for p in rows
         }
 
-    return [_serialize(p, can_see_money, balances.get(p.id, float(p.opening_balance))) for p in rows]
+    invoice_summaries = _invoice_status_summaries(db, [p.id for p in rows]) if can_see_money and rows else {}
+
+    return [
+        _serialize(p, can_see_money, balances.get(p.id, float(p.opening_balance)), invoice_summaries.get(p.id))
+        for p in rows
+    ]
 
 
 @router.post(

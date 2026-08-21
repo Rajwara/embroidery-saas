@@ -88,6 +88,9 @@ export default function SuppliersPage() {
                 <TableHead>Contact Person</TableHead>
                 <TableHead>Phone</TableHead>
                 {canSeeMoney && <TableHead className="text-right">Balance</TableHead>}
+                {canSeeMoney && <TableHead className="text-right">Paid Purchases</TableHead>}
+                {canSeeMoney && <TableHead className="text-right">Pending Purchases</TableHead>}
+                {canSeeMoney && <TableHead className="text-right">Overdue Purchases</TableHead>}
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -108,6 +111,30 @@ export default function SuppliersPage() {
                         : "—"}
                     </TableCell>
                   )}
+                  {canSeeMoney && (
+                    <PurchaseStatusCell
+                      href={`/suppliers/${supplier.id}`}
+                      variant="success"
+                      count={supplier.paid_purchases_count ?? 0}
+                      amount={supplier.paid_purchases_amount ?? 0}
+                    />
+                  )}
+                  {canSeeMoney && (
+                    <PurchaseStatusCell
+                      href={`/suppliers/${supplier.id}`}
+                      variant="warning"
+                      count={supplier.pending_purchases_count ?? 0}
+                      amount={supplier.pending_purchases_amount ?? 0}
+                    />
+                  )}
+                  {canSeeMoney && (
+                    <PurchaseStatusCell
+                      href={`/suppliers/${supplier.id}`}
+                      variant="destructive"
+                      count={supplier.overdue_purchases_count ?? 0}
+                      amount={supplier.overdue_purchases_amount ?? 0}
+                    />
+                  )}
                   <TableCell>
                     <Badge variant={supplier.is_active ? "success" : "secondary"}>
                       {supplier.is_active ? "Active" : "Inactive"}
@@ -123,6 +150,30 @@ export default function SuppliersPage() {
   );
 }
 
+function PurchaseStatusCell({
+  href,
+  variant,
+  count,
+  amount,
+}: {
+  href: string;
+  variant: "success" | "warning" | "destructive";
+  count: number;
+  amount: number;
+}) {
+  if (count === 0) {
+    return <TableCell className="text-right text-muted-foreground">—</TableCell>;
+  }
+  return (
+    <TableCell className="text-right">
+      <Link href={href} className="inline-flex flex-col items-end gap-0.5 hover:underline">
+        <Badge variant={variant}>{count}</Badge>
+        <span className="text-xs tabular-nums text-muted-foreground">{amount.toFixed(2)}</span>
+      </Link>
+    </TableCell>
+  );
+}
+
 function SuppliersTableSkeleton({ canSeeMoney }: { canSeeMoney: boolean }) {
   return (
     <div className="rounded-xl border">
@@ -133,6 +184,9 @@ function SuppliersTableSkeleton({ canSeeMoney }: { canSeeMoney: boolean }) {
             <TableHead>Contact Person</TableHead>
             <TableHead>Phone</TableHead>
             {canSeeMoney && <TableHead className="text-right">Balance</TableHead>}
+            {canSeeMoney && <TableHead className="text-right">Paid Purchases</TableHead>}
+            {canSeeMoney && <TableHead className="text-right">Pending Purchases</TableHead>}
+            {canSeeMoney && <TableHead className="text-right">Overdue Purchases</TableHead>}
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -151,6 +205,21 @@ function SuppliersTableSkeleton({ canSeeMoney }: { canSeeMoney: boolean }) {
               {canSeeMoney && (
                 <TableCell className="text-right">
                   <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+              )}
+              {canSeeMoney && (
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-12" />
+                </TableCell>
+              )}
+              {canSeeMoney && (
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-12" />
+                </TableCell>
+              )}
+              {canSeeMoney && (
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-12" />
                 </TableCell>
               )}
               <TableCell>

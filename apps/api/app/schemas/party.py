@@ -61,6 +61,18 @@ class PartyWithBalanceOut(PartyOut):
     # opening_balance alone is just the starting number set at party
     # creation, not the party's actual outstanding balance today.
     current_balance: Decimal
+    # Bulk-computed by routers/parties.py's _invoice_status_summaries --
+    # zero on every endpoint except list_parties (nothing else surfaces
+    # these today, so it isn't worth computing them elsewhere yet).
+    # paid_invoices_amount sums each paid invoice's total; pending/overdue
+    # amounts sum outstanding balance, not total (see that function's
+    # docstring for why).
+    paid_invoices_count: int = 0
+    paid_invoices_amount: float = 0.0
+    pending_invoices_count: int = 0
+    pending_invoices_amount: float = 0.0
+    overdue_invoices_count: int = 0
+    overdue_invoices_amount: float = 0.0
 
 
 class PartyDocsOut(PartyOut):
@@ -84,3 +96,9 @@ class PartyDocsOut(PartyOut):
 
     opening_balance: Decimal | None = None
     current_balance: Decimal | None = None
+    paid_invoices_count: int | None = None
+    paid_invoices_amount: float | None = None
+    pending_invoices_count: int | None = None
+    pending_invoices_amount: float | None = None
+    overdue_invoices_count: int | None = None
+    overdue_invoices_amount: float | None = None

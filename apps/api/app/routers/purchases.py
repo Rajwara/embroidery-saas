@@ -35,6 +35,7 @@ def _to_purchase_out(purchase: Purchase, total_amount: float) -> PurchaseOut:
         supplier_id=purchase.supplier_id,
         purchase_number=purchase.purchase_number,
         purchase_date=purchase.purchase_date,
+        due_date=purchase.due_date,
         notes=purchase.notes,
         total_amount=total_amount,
     )
@@ -112,6 +113,7 @@ def create_purchase(
         supplier_id=supplier.id,
         purchase_number=purchase_number,
         purchase_date=payload.purchase_date,
+        due_date=payload.due_date,
         notes=payload.notes,
     )
     db.add(purchase)

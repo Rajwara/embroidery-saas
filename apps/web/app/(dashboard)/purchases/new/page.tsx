@@ -29,6 +29,7 @@ export default function NewPurchasePage() {
   const [supplierId, setSupplierId] = useState("");
   const [branchId, setBranchId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
 
@@ -67,6 +68,7 @@ export default function NewPurchasePage() {
         branch_id: branchId,
         supplier_id: supplierId,
         purchase_date: purchaseDate,
+        due_date: dueDate || undefined,
         notes: notes || undefined,
         lines: lines.map((line) => ({
           description: line.description,
@@ -127,15 +129,26 @@ export default function NewPurchasePage() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Purchase date</label>
-          <input
-            type="date"
-            value={purchaseDate}
-            onChange={(e) => setPurchaseDate(e.target.value)}
-            required
-            className="mt-1 w-full max-w-xs rounded border border-gray-300 px-3 py-2 text-sm"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Purchase date</label>
+            <input
+              type="date"
+              value={purchaseDate}
+              onChange={(e) => setPurchaseDate(e.target.value)}
+              required
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Due date (optional)</label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
         </div>
 
         <div className="space-y-3 border-t border-gray-100 pt-4">

@@ -86,6 +86,9 @@ export default function PartiesPage() {
                 <TableHead>Contact Person</TableHead>
                 <TableHead>Phone</TableHead>
                 {canSeeMoney && <TableHead className="text-right">Balance</TableHead>}
+                {canSeeMoney && <TableHead className="text-right">Paid Invoices</TableHead>}
+                {canSeeMoney && <TableHead className="text-right">Pending Invoices</TableHead>}
+                {canSeeMoney && <TableHead className="text-right">Overdue Invoices</TableHead>}
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -106,6 +109,30 @@ export default function PartiesPage() {
                         : "—"}
                     </TableCell>
                   )}
+                  {canSeeMoney && (
+                    <InvoiceStatusCell
+                      href={`/parties/${party.id}`}
+                      variant="success"
+                      count={party.paid_invoices_count ?? 0}
+                      amount={party.paid_invoices_amount ?? 0}
+                    />
+                  )}
+                  {canSeeMoney && (
+                    <InvoiceStatusCell
+                      href={`/parties/${party.id}`}
+                      variant="warning"
+                      count={party.pending_invoices_count ?? 0}
+                      amount={party.pending_invoices_amount ?? 0}
+                    />
+                  )}
+                  {canSeeMoney && (
+                    <InvoiceStatusCell
+                      href={`/parties/${party.id}`}
+                      variant="destructive"
+                      count={party.overdue_invoices_count ?? 0}
+                      amount={party.overdue_invoices_amount ?? 0}
+                    />
+                  )}
                   <TableCell>
                     <Badge variant={party.is_active ? "success" : "secondary"}>
                       {party.is_active ? "Active" : "Inactive"}
@@ -121,6 +148,30 @@ export default function PartiesPage() {
   );
 }
 
+function InvoiceStatusCell({
+  href,
+  variant,
+  count,
+  amount,
+}: {
+  href: string;
+  variant: "success" | "warning" | "destructive";
+  count: number;
+  amount: number;
+}) {
+  if (count === 0) {
+    return <TableCell className="text-right text-muted-foreground">—</TableCell>;
+  }
+  return (
+    <TableCell className="text-right">
+      <Link href={href} className="inline-flex flex-col items-end gap-0.5 hover:underline">
+        <Badge variant={variant}>{count}</Badge>
+        <span className="text-xs tabular-nums text-muted-foreground">{amount.toFixed(2)}</span>
+      </Link>
+    </TableCell>
+  );
+}
+
 function PartiesTableSkeleton({ canSeeMoney }: { canSeeMoney: boolean }) {
   return (
     <div className="rounded-xl border">
@@ -131,6 +182,9 @@ function PartiesTableSkeleton({ canSeeMoney }: { canSeeMoney: boolean }) {
             <TableHead>Contact Person</TableHead>
             <TableHead>Phone</TableHead>
             {canSeeMoney && <TableHead className="text-right">Balance</TableHead>}
+            {canSeeMoney && <TableHead className="text-right">Paid Invoices</TableHead>}
+            {canSeeMoney && <TableHead className="text-right">Pending Invoices</TableHead>}
+            {canSeeMoney && <TableHead className="text-right">Overdue Invoices</TableHead>}
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -149,6 +203,21 @@ function PartiesTableSkeleton({ canSeeMoney }: { canSeeMoney: boolean }) {
               {canSeeMoney && (
                 <TableCell className="text-right">
                   <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+              )}
+              {canSeeMoney && (
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-12" />
+                </TableCell>
+              )}
+              {canSeeMoney && (
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-12" />
+                </TableCell>
+              )}
+              {canSeeMoney && (
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-12" />
                 </TableCell>
               )}
               <TableCell>

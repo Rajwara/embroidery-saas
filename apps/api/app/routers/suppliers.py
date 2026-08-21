@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.audit import client_meta, record_audit
 from app.db import get_db, set_tenant_context
 from app.dependencies import require_permission
-from app.models import Purchase, PurchaseLineItem, Supplier, SupplierPayment, User
+from app.models import Purchase, PurchaseLineItem, Supplier, SupplierPayment, SupplierPaymentAllocation, User
 from app.pdf import html_to_pdf
 from app.permissions import user_has_permission
 from app.schemas.supplier import (
@@ -53,8 +53,21 @@ STATEMENT_PDF_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 
+_ZERO_PURCHASE_SUMMARY = {
+    "paid_purchases_count": 0,
+    "paid_purchases_amount": 0.0,
+    "pending_purchases_count": 0,
+    "pending_purchases_amount": 0.0,
+    "overdue_purchases_count": 0,
+    "overdue_purchases_amount": 0.0,
+}
+
+
 def _serialize(
-    supplier: Supplier, can_see_money: bool, current_balance: float = 0.0
+    supplier: Supplier,
+    can_see_money: bool,
+    current_balance: float = 0.0,
+    purchase_summary: dict | None = None,
 ) -> SupplierOut | SupplierWithBalanceOut:
     if not can_see_money:
         return SupplierOut.model_validate(supplier)
@@ -62,6 +75,7 @@ def _serialize(
         **SupplierOut.model_validate(supplier).model_dump(),
         opening_balance=supplier.opening_balance,
         current_balance=current_balance,
+        **(purchase_summary or _ZERO_PURCHASE_SUMMARY),
     )
 
 
@@ -84,6 +98,57 @@ def _current_balance(db: Session, supplier: Supplier) -> float:
         .scalar()
     )
     return float(supplier.opening_balance) + float(purchase_total) - float(payment_total)
+
+
+def _purchase_status_summaries(db: Session, supplier_ids: list[uuid.UUID]) -> dict[uuid.UUID, dict]:
+    """Bulk paid/pending/overdue purchase counts+amounts, mirroring Party's
+    _invoice_status_summaries in routers/parties.py -- see that function's
+    docstring for the amount-vs-balance reasoning, identical here."""
+    if not supplier_ids:
+        return {}
+    purchase_rows = (
+        db.query(
+            Purchase.id,
+            Purchase.supplier_id,
+            Purchase.due_date,
+            func.coalesce(func.sum(PurchaseLineItem.line_total), 0).label("total"),
+        )
+        .join(PurchaseLineItem, PurchaseLineItem.purchase_id == Purchase.id)
+        .filter(Purchase.supplier_id.in_(supplier_ids))
+        .group_by(Purchase.id, Purchase.supplier_id, Purchase.due_date)
+        .all()
+    )
+    if not purchase_rows:
+        return {}
+
+    purchase_ids = [row.id for row in purchase_rows]
+    paid_totals = dict(
+        db.query(SupplierPaymentAllocation.purchase_id, func.coalesce(func.sum(SupplierPaymentAllocation.amount), 0))
+        .filter(
+            SupplierPaymentAllocation.allocation_type == "purchase",
+            SupplierPaymentAllocation.purchase_id.in_(purchase_ids),
+        )
+        .group_by(SupplierPaymentAllocation.purchase_id)
+        .all()
+    )
+
+    today = date_type.today()
+    summaries: dict[uuid.UUID, dict] = {}
+    for row in purchase_rows:
+        summary = summaries.setdefault(row.supplier_id, dict(_ZERO_PURCHASE_SUMMARY))
+        total = float(row.total)
+        paid = float(paid_totals.get(row.id, 0))
+        balance = round(total - paid, 2)
+        if balance <= 0.005:
+            summary["paid_purchases_count"] += 1
+            summary["paid_purchases_amount"] += total
+        elif row.due_date is not None and row.due_date < today:
+            summary["overdue_purchases_count"] += 1
+            summary["overdue_purchases_amount"] += balance
+        else:
+            summary["pending_purchases_count"] += 1
+            summary["pending_purchases_amount"] += balance
+    return summaries
 
 
 # NOTE: response_model is deliberately NOT set on any route below -- see
@@ -132,7 +197,12 @@ def list_suppliers(
             for s in rows
         }
 
-    return [_serialize(s, can_see_money, balances.get(s.id, float(s.opening_balance))) for s in rows]
+    purchase_summaries = _purchase_status_summaries(db, [s.id for s in rows]) if can_see_money and rows else {}
+
+    return [
+        _serialize(s, can_see_money, balances.get(s.id, float(s.opening_balance)), purchase_summaries.get(s.id))
+        for s in rows
+    ]
 
 
 @router.post(

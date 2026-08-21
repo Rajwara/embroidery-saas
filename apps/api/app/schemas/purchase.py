@@ -19,6 +19,7 @@ class PurchaseCreateRequest(BaseModel):
     branch_id: uuid.UUID
     supplier_id: uuid.UUID
     purchase_date: date
+    due_date: date | None = None
     notes: str | None = None
     lines: list[PurchaseLineItemCreateRequest]
     # purchase_number excluded -- server-assigned, same pattern as Lot.lot_number.
@@ -42,6 +43,7 @@ class PurchaseOut(BaseModel):
     supplier_id: uuid.UUID
     purchase_number: str
     purchase_date: date
+    due_date: date | None
     notes: str | None
     # Denormalized read-only convenience field -- summed by the router, not
     # a stored column (same reasoning as InvoiceOut.total_amount).
