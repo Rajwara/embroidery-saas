@@ -17,7 +17,6 @@ export function isNavGroup(item: NavItem): item is NavGroup {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", requiredPermission: null },
-  { label: "Notifications", href: "/notifications", requiredPermission: null },
   { label: "Approvals", href: "/approvals", requiredPermission: "production_entries.approve" },
   {
     label: "Parties",
