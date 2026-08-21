@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { createPayment, getInvoiceBalances, listBranches, listParties } from "@embroidery/types";
 import type { BranchOut, InvoiceBalanceOut, Party, PaymentAllocationCreateRequest } from "@embroidery/types";
@@ -30,13 +30,23 @@ const OTHER_TYPE_OPTIONS: { value: OtherType; label: string }[] = [
 ];
 
 export default function NewPaymentPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewPaymentForm />
+    </Suspense>
+  );
+}
+
+function NewPaymentForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const lockedPartyId = searchParams.get("party_id");
 
   const [parties, setParties] = useState<Party[]>([]);
   const [branches, setBranches] = useState<BranchOut[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [partyId, setPartyId] = useState("");
+  const [partyId, setPartyId] = useState(lockedPartyId ?? "");
   const [branchId, setBranchId] = useState("");
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [amount, setAmount] = useState("");
@@ -59,6 +69,13 @@ export default function NewPaymentPage() {
       })
       .catch(() => setLoadError("Could not load parties/branches."));
   }, []);
+
+  useEffect(() => {
+    if (!lockedPartyId) return;
+    getInvoiceBalances({ party_id: lockedPartyId })
+      .then((rows) => setBalances(rows.filter((row) => row.balance > 0)))
+      .catch(() => setBalancesError("Could not load outstanding invoices for this party."));
+  }, [lockedPartyId]);
 
   const handlePartyChange = (value: string) => {
     setPartyId(value);
@@ -148,7 +165,8 @@ export default function NewPaymentPage() {
               value={partyId}
               onChange={(e) => handlePartyChange(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              disabled={!!lockedPartyId}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500"
             >
               <option value="" disabled>
                 Select a party

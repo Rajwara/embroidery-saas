@@ -4,12 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, FileText } from "lucide-react";
 
-import { listInvoices, listParties } from "@embroidery/types";
-import type { InvoiceOut, Party } from "@embroidery/types";
+import { listParties } from "@embroidery/types";
+import type { Party } from "@embroidery/types";
 
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -21,20 +22,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+interface CompanyRow {
+  party: Party;
+  totalCount: number;
+}
+
 export default function InvoicesPage() {
   const { hasPermission } = useAuth();
-  const [invoices, setInvoices] = useState<InvoiceOut[] | null>(null);
-  const [parties, setParties] = useState<Party[]>([]);
+  const [parties, setParties] = useState<Party[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const canSeeMoney = hasPermission("parties.see_money");
 
   const load = useCallback(() => {
     setError(null);
-    setInvoices(null);
-    Promise.all([listInvoices(), listParties()])
-      .then(([invoicesData, partiesData]) => {
-        setInvoices(invoicesData);
-        setParties(partiesData);
-      })
+    setParties(null);
+    listParties()
+      .then(setParties)
       .catch((err) => {
         if (err instanceof ApiError && err.status === 403) {
           setError("You don't have permission to view invoices.");
@@ -48,7 +52,13 @@ export default function InvoicesPage() {
     load();
   }, [load]);
 
-  const partyName = (id: string) => parties.find((p) => p.id === id)?.name ?? "—";
+  const rows: CompanyRow[] = (parties ?? [])
+    .map((party) => ({
+      party,
+      totalCount:
+        (party.paid_invoices_count ?? 0) + (party.pending_invoices_count ?? 0) + (party.overdue_invoices_count ?? 0),
+    }))
+    .filter((row) => row.totalCount > 0);
 
   return (
     <div className="space-y-4">
@@ -71,42 +81,64 @@ export default function InvoicesPage() {
         </Alert>
       )}
 
-      {!error && invoices === null && <InvoicesTableSkeleton />}
+      {!error && parties === null && <CompanyTableSkeleton canSeeMoney={canSeeMoney} />}
 
-      {!error && invoices !== null && invoices.length === 0 && (
+      {!error && parties !== null && rows.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
           <FileText className="size-8 text-muted-foreground" />
           <p className="text-sm font-medium">No invoices yet</p>
-          <p className="text-sm text-muted-foreground">Invoices you create will show up here.</p>
+          <p className="text-sm text-muted-foreground">Invoices you create will show up here, grouped by company.</p>
         </div>
       )}
 
-      {!error && invoices !== null && invoices.length > 0 && (
+      {!error && parties !== null && rows.length > 0 && (
         <div className="rounded-xl border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Invoice #</TableHead>
-                <TableHead>Party</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Due</TableHead>
-                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Company</TableHead>
+                <TableHead className="text-right">Total Invoices</TableHead>
+                {canSeeMoney && <TableHead className="text-right">Total Amount</TableHead>}
+                {canSeeMoney && <TableHead className="text-right">Pending Amount</TableHead>}
+                {canSeeMoney && <TableHead className="text-right">Overdue Amount</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell>
-                    <Link href={`/invoices/${invoice.id}`} className="font-medium text-foreground hover:underline">
-                      {invoice.invoice_number}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{partyName(invoice.party_id)}</TableCell>
-                  <TableCell className="text-muted-foreground">{invoice.invoice_date}</TableCell>
-                  <TableCell className="text-muted-foreground">{invoice.due_date ?? "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{invoice.total_amount.toFixed(2)}</TableCell>
-                </TableRow>
-              ))}
+              {rows.map(({ party, totalCount }) => {
+                const overdue = party.overdue_invoices_amount ?? 0;
+                return (
+                  <TableRow key={party.id}>
+                    <TableCell>
+                      <Link
+                        href={`/invoices/party/${party.id}`}
+                        className="font-medium text-foreground hover:underline"
+                      >
+                        {party.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{totalCount}</TableCell>
+                    {canSeeMoney && (
+                      <TableCell className="text-right tabular-nums">
+                        {(party.total_invoiced_amount ?? 0).toFixed(2)}
+                      </TableCell>
+                    )}
+                    {canSeeMoney && (
+                      <TableCell className="text-right tabular-nums">
+                        {(party.pending_invoices_amount ?? 0).toFixed(2)}
+                      </TableCell>
+                    )}
+                    {canSeeMoney && (
+                      <TableCell className="text-right">
+                        {overdue > 0.005 ? (
+                          <Badge variant="destructive">{overdue.toFixed(2)}</Badge>
+                        ) : (
+                          <span className="tabular-nums text-muted-foreground">{overdue.toFixed(2)}</span>
+                        )}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -115,37 +147,43 @@ export default function InvoicesPage() {
   );
 }
 
-function InvoicesTableSkeleton() {
+function CompanyTableSkeleton({ canSeeMoney }: { canSeeMoney: boolean }) {
   return (
     <div className="rounded-xl border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Invoice #</TableHead>
-            <TableHead>Party</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Due</TableHead>
-            <TableHead className="text-right">Total</TableHead>
+            <TableHead>Company</TableHead>
+            <TableHead className="text-right">Total Invoices</TableHead>
+            {canSeeMoney && <TableHead className="text-right">Total Amount</TableHead>}
+            {canSeeMoney && <TableHead className="text-right">Pending Amount</TableHead>}
+            {canSeeMoney && <TableHead className="text-right">Overdue Amount</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {Array.from({ length: 5 }).map((_, i) => (
             <TableRow key={i}>
               <TableCell>
-                <Skeleton className="h-4 w-20" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-28" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-20" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-32" />
               </TableCell>
               <TableCell className="text-right">
-                <Skeleton className="ml-auto h-4 w-16" />
+                <Skeleton className="ml-auto h-4 w-10" />
               </TableCell>
+              {canSeeMoney && (
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+              )}
+              {canSeeMoney && (
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+              )}
+              {canSeeMoney && (
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

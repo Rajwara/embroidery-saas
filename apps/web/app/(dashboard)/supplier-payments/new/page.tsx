@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { createSupplierPayment, getPurchaseBalances, listBranches, listSuppliers } from "@embroidery/types";
 import type { BranchOut, PurchaseBalanceOut, Supplier, SupplierPaymentAllocationCreateRequest } from "@embroidery/types";
@@ -30,13 +30,23 @@ const OTHER_TYPE_OPTIONS: { value: OtherType; label: string }[] = [
 ];
 
 export default function NewSupplierPaymentPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewSupplierPaymentForm />
+    </Suspense>
+  );
+}
+
+function NewSupplierPaymentForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const lockedSupplierId = searchParams.get("supplier_id");
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [branches, setBranches] = useState<BranchOut[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [supplierId, setSupplierId] = useState("");
+  const [supplierId, setSupplierId] = useState(lockedSupplierId ?? "");
   const [branchId, setBranchId] = useState("");
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [amount, setAmount] = useState("");
@@ -59,6 +69,13 @@ export default function NewSupplierPaymentPage() {
       })
       .catch(() => setLoadError("Could not load suppliers/branches."));
   }, []);
+
+  useEffect(() => {
+    if (!lockedSupplierId) return;
+    getPurchaseBalances({ supplier_id: lockedSupplierId })
+      .then((rows) => setBalances(rows.filter((row) => row.balance > 0)))
+      .catch(() => setBalancesError("Could not load outstanding purchases for this supplier."));
+  }, [lockedSupplierId]);
 
   const handleSupplierChange = (value: string) => {
     setSupplierId(value);
@@ -148,7 +165,8 @@ export default function NewSupplierPaymentPage() {
               value={supplierId}
               onChange={(e) => handleSupplierChange(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              disabled={!!lockedSupplierId}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500"
             >
               <option value="" disabled>
                 Select a supplier

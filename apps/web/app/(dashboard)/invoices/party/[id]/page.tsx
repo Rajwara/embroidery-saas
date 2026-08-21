@@ -1,0 +1,161 @@
+"use client";
+
+import { useCallback, useEffect, useState, use } from "react";
+import Link from "next/link";
+import { AlertCircle, FileText } from "lucide-react";
+
+import { getParty, listInvoices } from "@embroidery/types";
+import type { InvoiceOut, PartyDocsOut } from "@embroidery/types";
+
+import { ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+export default function PartyInvoicesPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
+  const { hasPermission } = useAuth();
+  const [party, setParty] = useState<PartyDocsOut | null>(null);
+  const [invoices, setInvoices] = useState<InvoiceOut[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    setError(null);
+    setParty(null);
+    setInvoices(null);
+    Promise.all([getParty(params.id), listInvoices({ party_id: params.id, limit: 200 })])
+      .then(([partyData, invoicesData]) => {
+        setParty(partyData);
+        setInvoices(invoicesData);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 404) {
+          setError("Party not found.");
+        } else if (err instanceof ApiError && err.status === 403) {
+          setError("You don't have permission to view this company's invoices.");
+        } else {
+          setError("Could not load invoices.");
+        }
+      });
+  }, [params.id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertTitle>{error}</AlertTitle>
+        <AlertDescription>
+          <Button variant="link" size="sm" className="h-auto p-0 text-destructive" onClick={load}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (party === null) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">{party.name}</h1>
+          <p className="text-sm text-muted-foreground">Invoices for this company</p>
+        </div>
+        {hasPermission("invoices.create") && (
+          <Button render={<Link href={`/invoices/new?party_id=${party.id}`} />}>New Invoice</Button>
+        )}
+      </div>
+
+      {invoices === null && (
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice #</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Due</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="ml-auto h-4 w-16" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {invoices !== null && invoices.length === 0 && (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+          <FileText className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No invoices yet</p>
+          <p className="text-sm text-muted-foreground">Invoices for {party.name} will show up here.</p>
+        </div>
+      )}
+
+      {invoices !== null && invoices.length > 0 && (
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice #</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Due</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell>
+                    <Link href={`/invoices/${invoice.id}`} className="font-medium text-foreground hover:underline">
+                      {invoice.invoice_number}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{invoice.invoice_date}</TableCell>
+                  <TableCell className="text-muted-foreground">{invoice.due_date ?? "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">{invoice.total_amount.toFixed(2)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}

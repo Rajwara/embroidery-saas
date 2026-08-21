@@ -21,12 +21,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const METHOD_LABELS: Record<string, string> = {
-  cash: "Cash",
-  bank_transfer: "Bank transfer",
-  cheque: "Cheque",
-  other: "Other",
-};
+interface CompanyRow {
+  party: Party;
+  count: number;
+  total: number;
+}
 
 export default function PaymentsPage() {
   const { hasPermission } = useAuth();
@@ -37,7 +36,7 @@ export default function PaymentsPage() {
   const load = useCallback(() => {
     setError(null);
     setPayments(null);
-    Promise.all([listPayments(), listParties()])
+    Promise.all([listPayments({ limit: 200 }), listParties()])
       .then(([paymentsData, partiesData]) => {
         setPayments(paymentsData);
         setParties(partiesData);
@@ -55,7 +54,23 @@ export default function PaymentsPage() {
     load();
   }, [load]);
 
-  const partyName = (id: string) => parties.find((p) => p.id === id)?.name ?? "—";
+  const rows: CompanyRow[] = (() => {
+    if (!payments) return [];
+    const byParty = new Map<string, { count: number; total: number }>();
+    for (const payment of payments) {
+      const entry = byParty.get(payment.party_id) ?? { count: 0, total: 0 };
+      entry.count += 1;
+      entry.total += payment.amount;
+      byParty.set(payment.party_id, entry);
+    }
+    return Array.from(byParty.entries())
+      .map(([partyId, agg]) => {
+        const party = parties.find((p) => p.id === partyId);
+        return party ? { party, ...agg } : null;
+      })
+      .filter((row): row is CompanyRow => row !== null)
+      .sort((a, b) => a.party.name.localeCompare(b.party.name));
+  })();
 
   return (
     <div className="space-y-4">
@@ -78,42 +93,36 @@ export default function PaymentsPage() {
         </Alert>
       )}
 
-      {!error && payments === null && <PaymentsTableSkeleton />}
+      {!error && payments === null && <CompanyTableSkeleton />}
 
-      {!error && payments !== null && payments.length === 0 && (
+      {!error && payments !== null && rows.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
           <Wallet className="size-8 text-muted-foreground" />
           <p className="text-sm font-medium">No payments yet</p>
-          <p className="text-sm text-muted-foreground">Payments you record will show up here.</p>
+          <p className="text-sm text-muted-foreground">Payments you record will show up here, grouped by company.</p>
         </div>
       )}
 
-      {!error && payments !== null && payments.length > 0 && (
+      {!error && payments !== null && rows.length > 0 && (
         <div className="rounded-xl border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Payment #</TableHead>
-                <TableHead>Party</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Method</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Company</TableHead>
+                <TableHead className="text-right">Total Payments</TableHead>
+                <TableHead className="text-right">Total Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {payments.map((payment) => (
-                <TableRow key={payment.id}>
+              {rows.map(({ party, count, total }) => (
+                <TableRow key={party.id}>
                   <TableCell>
-                    <Link href={`/payments/${payment.id}`} className="font-medium text-foreground hover:underline">
-                      {payment.payment_number}
+                    <Link href={`/payments/party/${party.id}`} className="font-medium text-foreground hover:underline">
+                      {party.name}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{partyName(payment.party_id)}</TableCell>
-                  <TableCell className="text-muted-foreground">{payment.payment_date}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {METHOD_LABELS[payment.payment_method] ?? payment.payment_method}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{payment.amount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{count}</TableCell>
+                  <TableCell className="text-right tabular-nums">{total.toFixed(2)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -124,33 +133,25 @@ export default function PaymentsPage() {
   );
 }
 
-function PaymentsTableSkeleton() {
+function CompanyTableSkeleton() {
   return (
     <div className="rounded-xl border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Payment #</TableHead>
-            <TableHead>Party</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Method</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
+            <TableHead>Company</TableHead>
+            <TableHead className="text-right">Total Payments</TableHead>
+            <TableHead className="text-right">Total Amount</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {Array.from({ length: 5 }).map((_, i) => (
             <TableRow key={i}>
               <TableCell>
-                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-32" />
               </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-28" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-20" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-24" />
+              <TableCell className="text-right">
+                <Skeleton className="ml-auto h-4 w-10" />
               </TableCell>
               <TableCell className="text-right">
                 <Skeleton className="ml-auto h-4 w-16" />

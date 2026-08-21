@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { createInvoice, getDesign, listBranches, listDesigns, listParties } from "@embroidery/types";
 import type { BranchOut, DesignOut, DesignVariantOut, Party } from "@embroidery/types";
@@ -35,7 +35,17 @@ function emptyLine(): LineDraft {
 }
 
 export default function NewInvoicePage() {
+  return (
+    <Suspense fallback={null}>
+      <NewInvoiceForm />
+    </Suspense>
+  );
+}
+
+function NewInvoiceForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const lockedPartyId = searchParams.get("party_id");
 
   const [parties, setParties] = useState<Party[]>([]);
   const [branches, setBranches] = useState<BranchOut[]>([]);
@@ -43,7 +53,7 @@ export default function NewInvoicePage() {
   const [variantsByDesign, setVariantsByDesign] = useState<Record<string, DesignVariantOut[]>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [partyId, setPartyId] = useState("");
+  const [partyId, setPartyId] = useState(lockedPartyId ?? "");
   const [branchId, setBranchId] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState("");
@@ -144,7 +154,8 @@ export default function NewInvoicePage() {
               value={partyId}
               onChange={(e) => setPartyId(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              disabled={!!lockedPartyId}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500"
             >
               <option value="" disabled>
                 Select a party
