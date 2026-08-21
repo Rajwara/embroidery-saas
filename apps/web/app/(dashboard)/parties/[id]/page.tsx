@@ -255,6 +255,7 @@ export default function PartyDetailPage(props: { params: Promise<{ id: string }>
   }
 
   const balanceByInvoiceId = new Map((balances ?? []).map((b) => [b.invoice_id, b]));
+  const paymentIdByNumber = new Map((payments ?? []).map((p) => [p.payment_number, p.id]));
   const totalInvoiced = (balances ?? []).reduce((sum, b) => sum + b.total_amount, 0);
   const totalReceived = (balances ?? []).reduce((sum, b) => sum + b.paid_amount, 0);
   const totalPending = (balances ?? []).reduce((sum, b) => sum + b.balance, 0);
@@ -635,7 +636,15 @@ export default function PartyDetailPage(props: { params: Promise<{ id: string }>
                           {ENTRY_TYPE_LABELS[entry.entry_type] ?? entry.entry_type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{entry.reference}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {entry.entry_type === "payment" && paymentIdByNumber.has(entry.reference) ? (
+                          <Link href={`/payments/${paymentIdByNumber.get(entry.reference)}`} className="hover:underline">
+                            {entry.reference}
+                          </Link>
+                        ) : (
+                          entry.reference
+                        )}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {entry.debit ? entry.debit.toFixed(2) : ""}
                       </TableCell>

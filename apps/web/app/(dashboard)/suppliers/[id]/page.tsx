@@ -5,12 +5,19 @@ import { useCallback, useEffect, useState, use } from "react";
 import Link from "next/link";
 import { AlertCircle, Loader2, Printer, Receipt } from "lucide-react";
 
-import { getPurchaseBalances, getSupplier, getSupplierLedger, listPurchases } from "@embroidery/types";
+import {
+  getPurchaseBalances,
+  getSupplier,
+  getSupplierLedger,
+  listPurchases,
+  listSupplierPayments,
+} from "@embroidery/types";
 import type {
   PurchaseBalanceOut,
   PurchaseOut,
   SupplierDocsOut,
   SupplierLedgerEntryOut,
+  SupplierPaymentOut,
 } from "@embroidery/types";
 
 import { ApiError, fetchPdfBlob } from "@/lib/api";
@@ -48,6 +55,7 @@ export default function SupplierDetailPage(props: { params: Promise<{ id: string
   const [ledger, setLedger] = useState<SupplierLedgerEntryOut[] | null>(null);
   const [purchases, setPurchases] = useState<PurchaseOut[] | null>(null);
   const [balances, setBalances] = useState<PurchaseBalanceOut[] | null>(null);
+  const [supplierPayments, setSupplierPayments] = useState<SupplierPaymentOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [printError, setPrintError] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
@@ -58,17 +66,20 @@ export default function SupplierDetailPage(props: { params: Promise<{ id: string
     setLedger(null);
     setPurchases(null);
     setBalances(null);
+    setSupplierPayments(null);
     Promise.all([
       getSupplier(params.id),
       canSeeMoney ? getSupplierLedger(params.id) : Promise.resolve(null),
       canSeeMoney ? listPurchases({ supplier_id: params.id, limit: 200 }) : Promise.resolve(null),
       canSeeMoney ? getPurchaseBalances({ supplier_id: params.id }) : Promise.resolve(null),
+      canSeeMoney ? listSupplierPayments({ supplier_id: params.id, limit: 200 }) : Promise.resolve(null),
     ])
-      .then(([supplierData, ledgerData, purchasesData, balancesData]) => {
+      .then(([supplierData, ledgerData, purchasesData, balancesData, supplierPaymentsData]) => {
         setSupplier(supplierData);
         setLedger(ledgerData);
         setPurchases(purchasesData);
         setBalances(balancesData);
+        setSupplierPayments(supplierPaymentsData);
       })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 404) {
@@ -122,6 +133,8 @@ export default function SupplierDetailPage(props: { params: Promise<{ id: string
       </div>
     );
   }
+
+  const supplierPaymentIdByNumber = new Map((supplierPayments ?? []).map((p) => [p.payment_number, p.id]));
 
   return (
     <div className="space-y-6">
@@ -254,7 +267,18 @@ export default function SupplierDetailPage(props: { params: Promise<{ id: string
                           {ENTRY_TYPE_LABELS[entry.entry_type] ?? entry.entry_type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{entry.reference}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {entry.entry_type === "payment" && supplierPaymentIdByNumber.has(entry.reference) ? (
+                          <Link
+                            href={`/supplier-payments/${supplierPaymentIdByNumber.get(entry.reference)}`}
+                            className="hover:underline"
+                          >
+                            {entry.reference}
+                          </Link>
+                        ) : (
+                          entry.reference
+                        )}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {entry.debit ? entry.debit.toFixed(2) : ""}
                       </TableCell>
